@@ -256,7 +256,7 @@ def deconvolve_signal(convolved_truth_indicator: Tuple[str, str],
         if convolved_truth is not None:
             deconvolved_truth[:, j] = Deconvolution.fit_cv(convolved_truth[1],
                                                            kernel, cv_grid)
-        if j % 25 == 0: print(f"Deconvolved {j}/{n_locs}")
+        if (j + 1) % 25 == 0: print(f"Deconvolved {j}/{n_locs}")
 
     # filter for desired input dates
     input_idx = [i for i, date in enumerate(full_dates) if date in input_dates]

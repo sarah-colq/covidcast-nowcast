@@ -1,4 +1,4 @@
-"""Estimate the covariance matrix."""
+"""Estimate R, the measurement noise covariance matrix."""
 
 from typing import List, Tuple
 

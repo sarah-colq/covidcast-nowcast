@@ -1,4 +1,4 @@
-"""Estimate the covariance matrix."""
+"""Functions to run sensorization."""
 
 from typing import List, Tuple
 
@@ -19,7 +19,7 @@ def generate_sensors(input_dates: List[int],
 
     Returns
     -------
-        TBD
+        TBDL
     """
     # api_sensors = []
     # ar_sensors = []
