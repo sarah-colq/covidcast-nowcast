@@ -2,6 +2,11 @@
 
 from typing import List, Tuple
 
+import numpy as np
+
+from src.ar_sensor import ArSensor
+
+
 def generate_sensors(input_dates: List[int],
                      input_location: List[Tuple[str, str]],
                      sensor_indicators: List[Tuple[str, str]],
@@ -19,7 +24,7 @@ def generate_sensors(input_dates: List[int],
 
     Returns
     -------
-        TBDL
+        TBD
     """
     # api_sensors = []
     # ar_sensors = []
@@ -31,11 +36,37 @@ def generate_sensors(input_dates: List[int],
     pass
 
 
-def get_ar_sensor():
+def get_ar_sensor(input_dates: List[int], signal: np.ndarray,
+                  n_lags: int = 3) -> Tuple[List[int], np.ndarray]:
+    """
+    The n_lags points in input_dates/signal must be the most recent dates to the
+    desired nowcast date! Otherwise, we cannot predict the point at nowcast date.
+
+    Parameters
+    ----------
+    input_dates
+    signal
+    n_lags
+
+    Returns
+    -------
+
+    """
     # get existing sensor values from DB
     # for dates that arent available (hopefully just today), grab necessary window of indicator values
     # return sensor values up to and including today (current sensor value)
-    pass
+
+    sensors = []  # todo: get from DB
+
+    # create an auto-regression "sensor" for all locations
+    # 3 covariates, no intercept, small L2 penalty
+    B, Yhat, dates, z = ArSensor.get_sensor(input_dates, signal, n_lags, False, 0.1)
+
+    # todo: insert z into db
+    # temp hack, just return the in-sample values
+    sensors = Yhat
+
+    return dates, Yhat, z
 
 
 def get_indicator_sensor():
