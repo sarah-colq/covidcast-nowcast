@@ -8,6 +8,8 @@ from delphi_epidata import Epidata
 from scipy.linalg import toeplitz
 from scipy.sparse import diags as band
 
+from src.dataclass import LocationSeries
+
 
 class TempEpidata:
 
@@ -18,7 +20,7 @@ class TempEpidata:
     @staticmethod
     def get_signal_range(source: str, signal: str, start_date: int, end_date: int,
                          geo_type: str, geo_value: Union[int, str, float]
-                         ) -> Optional[Tuple[list, np.ndarray]]:
+                         ) -> Optional[LocationSeries]:
         response = Epidata.covidcast(source, signal, 'day', geo_type,
                                      Epidata.range(start_date, end_date),
                                      geo_value)
@@ -27,7 +29,9 @@ class TempEpidata:
             return None
         values = [(row['time_value'], row['value']) for row in response['epidata']]
         values = sorted(values, key=lambda ab: ab[0])
-        return [ab[0] for ab in values], np.array([ab[1] for ab in values])
+        return LocationSeries(geo_value, geo_type,
+                              [ab[0] for ab in values],
+                              np.array([ab[1] for ab in values]))
 
 
 class Deconvolution:
@@ -206,7 +210,7 @@ def deconvolve_signal(convolved_truth_indicator: Tuple[str, str],
                       input_dates: List[int],
                       input_locations: List[Tuple[str, str]],
                       kernel: np.ndarray
-                      ) -> np.ndarray:
+                      ) -> List[LocationSeries]:
     """
     Compute ground truth signal value by deconvolving an indicator with a delay distribution.
 
@@ -225,23 +229,22 @@ def deconvolve_signal(convolved_truth_indicator: Tuple[str, str],
 
     Returns
     -------
-        Matrix of deconvolved ground truth values for each location.
+        dataclass with deconvolved signal and corresponding location/dates
     """
 
     # lambda grid to search over, todo: should make finer in prod
     cv_grid = np.logspace(1, 3.5, 10)
     n_locs = len(input_locations)
-    start_date = TempEpidata.to_date(input_dates[0])
-    end_date = TempEpidata.to_date(input_dates[-1])
 
     # full date range (input_dates can be discontinuous)
+    start_date = TempEpidata.to_date(input_dates[0])
+    end_date = TempEpidata.to_date(input_dates[-1])
     n_full_dates = (end_date - start_date).days + 1
     full_dates = [start_date + datetime.timedelta(days=a) for a in range(n_full_dates)]
     full_dates = [int(d.strftime('%Y%m%d')) for d in full_dates]
 
-    # output columns corresponds to order of input_locations
-    # output rows corresponds to dates
-    deconvolved_truth = np.full((n_full_dates, n_locs), np.nan)
+    # output corresponds to order of input_locations
+    deconvolved_truth = []
     for j, (loc, geo_type) in enumerate(input_locations):
         # epidata call to get convolved truth
         # note: returns signal over input dates, continuous. addtl filtering needed if
@@ -254,12 +257,19 @@ def deconvolve_signal(convolved_truth_indicator: Tuple[str, str],
 
         # todo: better handle missing dates/locations
         if convolved_truth is not None:
-            deconvolved_truth[:, j] = Deconvolution.fit_cv(convolved_truth[1],
-                                                           kernel, cv_grid)
+            deconvolved_truth.append(LocationSeries(loc, geo_type, convolved_truth.dates,
+                                                    Deconvolution.fit_cv(
+                                                        convolved_truth.values,
+                                                        kernel, cv_grid)
+                                                    ))
+        else:
+            deconvolved_truth.append(LocationSeries(loc, geo_type, full_dates,
+                                                    np.full((n_full_dates,), np.nan)))
+
         if (j + 1) % 25 == 0: print(f"Deconvolved {j}/{n_locs}")
 
     # filter for desired input dates
-    input_idx = [i for i, date in enumerate(full_dates) if date in input_dates]
-    deconvolved_truth = deconvolved_truth[input_idx, :]
+    # input_idx = [i for i, date in enumerate(full_dates) if date in input_dates]
+    # deconvolved_truth = deconvolved_truth[input_idx, :]
 
     return deconvolved_truth
