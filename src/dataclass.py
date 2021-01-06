@@ -1,20 +1,20 @@
 from dataclasses import dataclass
 from typing import List, Union
 
-from numpy import ndarray
+from numpy import nan, ndarray
 
 
 @dataclass
-class LocationValue:
-    geo_value: str
-    geo_type: str
-    date: int
-    value: float
+class LocationPoint:
+    geo_value: str = None
+    geo_type: str = None
+    date: int = None
+    value: float = nan
 
 
 @dataclass
 class LocationSeries:
-    geo_value: str
-    geo_type: str
-    dates: List[int]
-    values: Union[List, ndarray]
+    geo_value: str = None
+    geo_type: str = None
+    dates: List[int] = list
+    values: Union[List, ndarray] = list

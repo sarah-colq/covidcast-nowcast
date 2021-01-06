@@ -1,12 +1,11 @@
 """Run nowcast."""
 
-import datetime
-from typing import List, Optional, Tuple, Union
+from typing import List, Tuple
 
 import numpy as np
 
 import src.deconvolution as deconv
-import src.sensors as sensors
+
 
 def nowcast(input_dates: List[int],
             input_locations: List[Tuple[str, str]],
@@ -21,7 +20,7 @@ def nowcast(input_dates: List[int],
     ----------
     input_dates
         List of dates to train data on and get nowcasts for.
-    input_location
+    input_locations
         List of (location, geo_type) tuples specifying locations to train and obtain nowcasts for.
     sensor_indicators
         List of (source, signal) tuples specifying indicators to use as sensors.
