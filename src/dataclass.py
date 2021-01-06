@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Union
 
-import numpy as np
+from numpy import ndarray
 
 
 @dataclass
@@ -17,4 +17,4 @@ class LocationSeries:
     geo_value: str
     geo_type: str
     dates: List[int]
-    values: Union[List, np.ndarray]
+    values: Union[List, ndarray]
