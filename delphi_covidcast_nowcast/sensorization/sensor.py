@@ -1,14 +1,14 @@
 """Functions to run sensorization."""
 import os
 from typing import List, Tuple, Dict
-
+from datetime import date
 import numpy as np
 from pandas import date_range
-import covidcast
 from delphi_epidata import Epidata
 
 from ..data_containers import LocationSeries, SignalConfig
-from .model import compute_ar_sensor, compute_regression_sensor
+from .ar_model import compute_ar_sensor
+from .regression_model import compute_regression_sensor
 
 
 def get_sensors(start_date: int,
@@ -95,24 +95,33 @@ def get_sensor_values(sensor: SignalConfig,
     if not compute_missing or not missing_dates:
         return output
     # gets all available data for now, could be optimized
-    indicator_values = covidcast.signal(sensor.source,
-                                        sensor.signal,
-                                        geo_values=ground_truth.geo_value,
-                                        geo_type=ground_truth.geo_type)
-    indicator_values = LocationSeries(geo_value=ground_truth.geo_value,  # reformat dataframe
-                                      geo_type=ground_truth.geo_type,
-                                      dates=indicator_values.time_value,
-                                      values=indicator_values.value)
-    for date in missing_dates:
+    response = Epidata.covidcast(data_source=sensor.source,
+                                 signals=sensor.signal,
+                                 time_type="day",
+                                 time_values=Epidata.range(
+                                     20200101,
+                                     int(date.today().strftime("%Y%m%d"))),
+                                 geo_value=ground_truth.geo_value,
+                                 geo_type=ground_truth.geo_type)
+    if response["result"] != 1:
+        raise Exception(f"Bad result from Epidata: {response['message']}")
+    indicator_values = LocationSeries(
+        geo_value=ground_truth.geo_value,
+        geo_type=ground_truth.geo_type,
+        dates=[i["time_value"] for i in response["epidata"] if not np.isnan(i["value"])],
+        values=[i["value"] for i in response["epidata"] if not np.isnan(i["value"])]
+    )
+    for day in missing_dates:
         if sensor.model == "ar":
-            sensor_value = compute_ar_sensor(date, indicator_values)
+            sensor_value = compute_ar_sensor(day, indicator_values)
         elif sensor.model == "regression":
-            sensor_value = compute_regression_sensor(date, indicator_values, ground_truth)
+            sensor_value = compute_regression_sensor(day, indicator_values, ground_truth)
         else:
             raise ValueError("Invalid sensorization method. Must be 'ar' or 'regression'")
-        output.values.append(sensor_value)  # what if its a numpy array? would need to change method
-        output.dates.append(date)
-        _export_to_csv(sensor_value, sensor, ground_truth.geo_type, ground_truth.geo_value, date)
+        output.values.append(sensor_value)  # if np array would need to change append method
+        output.dates.append(day)
+        # commented out for now
+        # _export_to_csv(sensor_value, sensor, ground_truth.geo_type, ground_truth.geo_value, date)
     return output
 
 
@@ -147,8 +156,8 @@ def _get_historical_data(indicator: SignalConfig,
     ########################################################################################
     # REPLACE THIS WITH Epidata.covidcast_nowcast ONCE IT IS AVAILABLE (PUBLISHED TO PYPI) #
     ########################################################################################
-    response = Epidata.covidcast(source=indicator.source,
-                                         signal=indicator.signal,
+    response = Epidata.covidcast(data_source=indicator.source,
+                                         signals=indicator.signal,
                                          time_type="day",
                                          geo_type=geo_type,
                                          time_values=Epidata.range(start_date, end_date),

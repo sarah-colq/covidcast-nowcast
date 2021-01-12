@@ -7,6 +7,7 @@ import numpy as np
 from .deconvolution.deconvolution import deconvolve_signal
 from .data_containers import SignalConfig
 
+
 def nowcast(input_dates: List[int],
             input_locations: List[Tuple[str, str]],
             sensor_indicators: List[SignalConfig],

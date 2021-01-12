@@ -1,15 +1,6 @@
 from ..data_containers import LocationSeries
 
 
-def compute_ar_sensor(date: int,
-                      values: LocationSeries,
-                      other_params=None) -> float:
-    """Fit model and get sensorization value for a given date."""
-    # select dates required for training and predicting a value for "date" e.g. last 60 days
-    # for specified date, compute the sensorization value and return it
-    pass
-
-
 def compute_regression_sensor(date: int,
                               values: LocationSeries,
                               response: LocationSeries,

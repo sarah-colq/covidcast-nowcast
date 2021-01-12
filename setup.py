@@ -9,8 +9,8 @@ required = [
     "pytest-cov",
     "pylint",
     # "delphi-utils",
-    "covidcast",
-    "delphi-epidata"
+    "delphi-epidata",
+    "statsmodels"
 ]
 
 setup(

@@ -16,5 +16,7 @@ class SignalConfig:
 class LocationSeries:
     geo_value: str = None
     geo_type: str = None
-    dates: List[int] = list
-    values: Union[List, ndarray] = list
+    dates: List[int] = None
+    values: Union[List, ndarray] = None
+
+    # add setter check enforcing that len(dates) == len(values)?

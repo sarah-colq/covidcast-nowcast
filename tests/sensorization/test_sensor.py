@@ -19,13 +19,14 @@ class TestGetSensors:
                                          LocationSeries("x"),
                                          LocationSeries("y"),
                                          LocationSeries("z")]
-        test_sensors = [SignalConfig("1"), SignalConfig("2")]
+        test_sensors = [SignalConfig("src1", "sigA", model="ar"),
+                        SignalConfig("src2", "sigB", model="ar")]
         test_ground_truths = [LocationSeries(geo_value="ca", geo_type="state", values=[np.nan, 1]),
                               LocationSeries(geo_value="pa", geo_type="state", values=[2, 3]),
                               LocationSeries(geo_value="ak", geo_type="state", values=[4, 5])]
         assert get_sensors(None, None, test_sensors, test_ground_truths, True) == {
-            SignalConfig("1"): [LocationSeries("w"), LocationSeries("y")],
-            SignalConfig("2"): [LocationSeries("x"), LocationSeries("z")]
+            SignalConfig("src1", "sigA", model="ar"): [LocationSeries("w"), LocationSeries("y")],
+            SignalConfig("src2", "sigB", model="ar"): [LocationSeries("x"), LocationSeries("z")]
         }
 
 
@@ -46,18 +47,18 @@ class TestGetSensorValues:
         assert get_sensor_values(None, None, None, test_ground_truth, False) == "output"
 
 
-    @patch("covidcast.signal")
+    @patch("delphi_covidcast_nowcast.sensorization.sensor.Epidata.covidcast")
     @patch("delphi_covidcast_nowcast.sensorization.sensor.compute_ar_sensor")
     @patch("delphi_covidcast_nowcast.sensorization.sensor.compute_regression_sensor")
     @patch("delphi_covidcast_nowcast.sensorization.sensor._get_historical_data")
     @patch("delphi_covidcast_nowcast.sensorization.sensor._export_to_csv")
-    def test_get_sensor_values_compute(self, export_csv, historical, regression_sensor, ar_sensor, covidcast_signal):
+    def test_get_sensor_values_compute(self, export_csv, historical, regression_sensor, ar_sensor, covidcast):
         """Test computation functions are called for missing dates"""
         export_csv.return_value = None
         historical.return_value = (LocationSeries(values=[], dates=[]), [20200101])
         regression_sensor.return_value = "regression value"
         ar_sensor.return_value = "ar value"
-        covidcast_signal.return_value = MagicMock(time_value=None, values=None)
+        covidcast.return_value = {"result": 1, "epidata": [{"time_value": 0, "value": 0}]}
         test_ground_truth = LocationSeries(geo_value="ca", geo_type="state")
         # test invalid sensor
         invalid_sensor = SignalConfig(model="not_valid")
