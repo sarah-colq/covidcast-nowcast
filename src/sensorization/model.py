@@ -1,14 +1,21 @@
-def compute_ar_sensor(date, values, other_params):
-	"""Fit model and get sensorization value for a given date."""
-	# select dates available for training out of all values
-	#
-	# for specified date, compute the sensorization value and return sensorization value
-	pass
+from ..data_containers import LocationSeries
 
 
-def compute_regression_sensor(date, values, other_params):
-	"""Fit model and get sensorization value for a given date."""
-	# select dates available for training out of all values
-	#
-	# for specified date, compute the sensorization value and return sensorization value
-	pass
+def compute_ar_sensor(date: int,
+                      values: LocationSeries,
+                      other_params=None) -> float:
+    """Fit model and get sensorization value for a given date."""
+    # select dates required for training and predicting a value for "date" e.g. last 60 days
+    # for specified date, compute the sensorization value and return it
+    pass
+
+
+def compute_regression_sensor(date: int,
+                              values: LocationSeries,
+                              response: LocationSeries,
+                              other_params=None) -> float:
+    """Fit model and get sensorization value for a given date."""
+    # select dates required for training and predicting a value for "date" e.g. last 60 days
+    # error if not enough data in either values or response
+    # for specified date, compute the sensorization value and return it
+    pass
