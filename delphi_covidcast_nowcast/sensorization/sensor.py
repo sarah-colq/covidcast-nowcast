@@ -1,5 +1,5 @@
 """Functions to run sensorization."""
-
+import os
 from typing import List, Tuple, Dict
 
 import numpy as np
@@ -112,7 +112,7 @@ def get_sensor_values(sensor: SignalConfig,
             raise ValueError("Invalid sensorization method. Must be 'ar' or 'regression'")
         output.values.append(sensor_value)  # what if its a numpy array? would need to change method
         output.dates.append(date)
-        _export_to_csv(sensor_value)
+        _export_to_csv(sensor_value, sensor, ground_truth.geo_type, ground_truth.geo_value, date)
     return output
 
 
@@ -167,7 +167,19 @@ def _get_historical_data(indicator: SignalConfig,
     return output, missing_dates
 
 
-def _export_to_csv(value):
+def _export_to_csv(value,
+                   sensor,
+                   geo_type,
+                   geo_value,
+                   date,
+                   receiving_dir="/common/covidcast_nowcast/receiving" # convert this to params file
+                   ) -> str:
     """Save value to csv for upload to epidata database"""
-    pass
+    export_dir = os.path.join(receiving_dir, sensor.signal)
+    os.makedirs(export_dir, exist_ok=True)
+    export_file = os.path.join(export_dir, f"{date}_{geo_type}_{sensor.signal}.csv")
+    with open(export_file, "w") as f:
+        f.write("sensor,geo_value,value\n")
+        f.write(f"{sensor.name},{geo_value},{value}\n")
+    return export_file
 

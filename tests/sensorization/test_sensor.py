@@ -1,10 +1,12 @@
 from unittest.mock import patch, MagicMock
+import os
 
 import pytest
 import numpy as np
+import tempfile
 
 from delphi_covidcast_nowcast.sensorization.sensor import \
-    get_sensors, get_sensor_values, _get_historical_data
+    get_sensors, get_sensor_values, _get_historical_data, _export_to_csv
 from delphi_covidcast_nowcast.data_containers import LocationSeries, SignalConfig
 
 
@@ -58,19 +60,19 @@ class TestGetSensorValues:
         covidcast_signal.return_value = MagicMock(time_value=None, values=None)
         test_ground_truth = LocationSeries(geo_value="ca", geo_type="state")
         # test invalid sensor
-        invalid_sensor = SignalConfig("1", model="not_valid")
+        invalid_sensor = SignalConfig(model="not_valid")
         with pytest.raises(ValueError):
             get_sensor_values(invalid_sensor, None, None, test_ground_truth, True)
 
         # instantiate new object for return value and test ar sensor
         historical.return_value = (LocationSeries(values=[], dates=[]), [20200101])
-        ar_sensor = SignalConfig("1", model="ar")
+        ar_sensor = SignalConfig(model="ar")
         assert get_sensor_values(ar_sensor, None, None, test_ground_truth, True) == \
                LocationSeries(values=["ar value"], dates=[20200101])
 
         # instantiate new object for return value and test regression sensor
         historical.return_value = (LocationSeries(values=[], dates=[]), [20200101])
-        regression_sensor = SignalConfig("1", model="regression")
+        regression_sensor = SignalConfig(model="regression")
         assert get_sensor_values(regression_sensor, None, None, test_ground_truth, True) == \
                LocationSeries(values=["regression value"], dates=[20200101])
 
@@ -98,4 +100,11 @@ class TestGetHistorcalData:
 class TestExportToCSV:
 
     def test__export_to_csv(self):
-        pass
+        test_sensor = SignalConfig(source="src",
+                                   signal="sig",
+                                   name="test")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_file = _export_to_csv(1.5, test_sensor, "state", "ca", 20200101, receiving_dir=tmpdir)
+            assert os.path.isfile(out_file)
+            with open(out_file) as f:
+                assert f.read() == "sensor,geo_value,value\ntest,ca,1.5\n"
