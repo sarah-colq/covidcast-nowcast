@@ -11,7 +11,7 @@ def compute_ar_sensor(date: int,
     """Fit model and get sensorization value for a given date."""
     # fill in gaps in data if any missing dates (e.g. polynomial imputation)?
     idx = values.dates.index(date)
-    Yhat = ar_predict(idx, np.array(values.values), ar_size, include_intercept, lambda_)
+    Yhat = ar_predict(idx, np.array(values.values), ar_size, include_intercept, lambda_)[1]
 
     # should we set a seed here?
     # np.random.seed(date) maybe?
@@ -25,7 +25,7 @@ def compute_ar_sensor(date: int,
     # the nowcast since AR3 can nearly exactly predict some trendfiltered
     # curves.
     Yhat += np.random.normal(0, 0.1 * np.maximum(0, np.mean(Yhat)))
-    return Yhat[1]
+    return Yhat
 
 
 def ar_predict(idx, values, ar_size, include_intercept, lambda_):
