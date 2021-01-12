@@ -3,6 +3,7 @@
 from typing import List, Tuple, Dict
 
 import numpy as np
+from pandas import date_range
 import covidcast
 from delphi_epidata import Epidata
 
@@ -86,7 +87,11 @@ def get_sensor_values(sensor: SignalConfig,
         LocationSeries of sensor data.
     """
     # left out recompute_all_data argument for now just to keep things simple
-    output, missing_dates = _get_historical_data(sensor, start_date, end_date)
+    output, missing_dates = _get_historical_data(sensor,
+                                                 ground_truth.geo_type,
+                                                 ground_truth.geo_value,
+                                                 start_date,
+                                                 end_date)
     if not compute_missing or not missing_dates:
         return output
     # gets all available data for now, could be optimized
@@ -111,15 +116,55 @@ def get_sensor_values(sensor: SignalConfig,
     return output
 
 
-def _get_historical_data(indicator, min_date, max_date) -> Tuple[LocationSeries, list]:
-    """Query Epidata API for historical sensorization data."""
-    Epidata.covidcast_nowcast(source=indicator.source,
-                              signal=indicator.signal,
-                              sensor_name=indicator.model)
-    # convert data to proper format (list of(value, date) tuples?)
-    # compute missing dates between min_date and max date
-    # return data, missing_dates
-    pass
+def _get_historical_data(indicator: SignalConfig,
+                         geo_type: str,
+                         geo_value: str,
+                         start_date: int,
+                         end_date: int) -> Tuple[LocationSeries, list]:
+    """
+    Query Epidata API for historical sensorization data.
+
+    Will only return values if they are not null. If they are null or are not available, they will
+    be listed as missing.
+
+    Parameters
+    ----------
+    indicator
+        SignalConfig specifying which sensor to retrieve.
+    geo_type
+        Geo type to retrieve.
+    geo_value
+        Geo value to retrieve.
+    start_date
+        First day to retrieve (inclusive).
+    end_date
+        Last day to retrieve (inclusive).
+
+    Returns
+    -------
+        Tuple of (LocationSeries containing non-na data, list of dates without valid data)
+    """
+    ########################################################################################
+    # REPLACE THIS WITH Epidata.covidcast_nowcast ONCE IT IS AVAILABLE (PUBLISHED TO PYPI) #
+    ########################################################################################
+    response = Epidata.covidcast(source=indicator.source,
+                                         signal=indicator.signal,
+                                         time_type="day",
+                                         geo_type=geo_type,
+                                         time_values=Epidata.range(start_date, end_date),
+                                         geo_value=geo_value)
+                                         # sensor_name=indicator.model) not added to DB yet.
+    if response["result"] != 1:
+        raise Exception(f"Bad result from Epidata: {response['message']}")
+    output = LocationSeries(
+        dates=[i["time_value"] for i in response["epidata"] if not np.isnan(i["value"])],
+        values=[i["value"] for i in response["epidata"] if not np.isnan(i["value"])],
+        geo_value=geo_value,
+        geo_type=geo_type
+    )
+    all_dates = [int(i.strftime("%Y%m%d")) for i in date_range(str(start_date), str(end_date))]
+    missing_dates = [i for i in all_dates if i not in output.dates]
+    return output, missing_dates
 
 
 def _export_to_csv(value):
