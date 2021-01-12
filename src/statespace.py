@@ -36,7 +36,7 @@ def generate_statespace(sensors: List[Tuple],
 def generate_H0(geos: Tuple,
                 num_sensors: int) -> np.ndarray:
     """
-    Build matrix of all available sensor-location pairs.
+    Build matrix of all available sensorization-location pairs.
 
     Parameters
     ----------

@@ -8,7 +8,7 @@ from delphi_epidata import Epidata
 from scipy.linalg import toeplitz
 from scipy.sparse import diags as band
 
-from src.dataclass import LocationSeries
+from src.data_containers import LocationSeries
 
 
 class TempEpidata:

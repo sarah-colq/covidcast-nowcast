@@ -4,7 +4,7 @@ from typing import List, Tuple
 
 import numpy as np
 
-import src.deconvolution as deconv
+import src.deconvolution.deconvolution as deconv
 
 
 def nowcast(input_dates: List[int],

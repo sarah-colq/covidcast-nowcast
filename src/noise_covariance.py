@@ -4,11 +4,12 @@ from typing import List, Tuple
 
 import numpy as np
 
+
 def estimate_covariance(input_dates: List[int],
                         sensors: List[Tuple],
                         ground_truth_values: np.ndarray):
     """
-    Estimate the sensor noise covariance matrix R.
+    Estimate the sensorization noise covariance matrix R.
 
 
     Parameters
@@ -26,3 +27,4 @@ def estimate_covariance(input_dates: List[int],
     # R = covariance.mle_cov(noise, covariance.BlendDiagonal2)
     # return R
     pass
+

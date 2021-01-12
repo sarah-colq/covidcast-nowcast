@@ -1,4 +1,4 @@
-"""Code copied from David Farrow to construct AR sensor."""
+"""Code copied from David Farrow to construct AR sensorization."""
 import numpy as np
 
 
@@ -43,8 +43,8 @@ class ArSensor:
 
     @staticmethod
     def get_sensor(dates, values, ar_size, include_intercept, lambda_):
-        # get a "sensor" that's actually just an auto-regression. each historical
-        # sensor reading (z) is based on an out-of-sample fit, only using data in
+        # get a "sensorization" that's actually just an auto-regression. each historical
+        # sensorization reading (z) is based on an out-of-sample fit, only using data in
         # the past.
         sensor_dates, Yhat = [], []
         for i, date in enumerate(dates):
@@ -67,9 +67,9 @@ class ArSensor:
         Yhat += np.random.normal(
             0, 0.1 * np.maximum(0, np.mean(Yhat)), size=Yhat.shape)
 
-        # in addition to the past values of the sensor, which are used to estimate
-        # covairance of sensor error wrt ground truth, we also want to return the
-        # current sensor reading. to determing the current reading, just apply the
+        # in addition to the past values of the sensorization, which are used to estimate
+        # covairance of sensorization error wrt ground truth, we also want to return the
+        # current sensorization reading. to determing the current reading, just apply the
         # most recent model (i.e. the `B` matrix) to the 3 most recent data points.
         x = values[None, -ar_size:]
         if include_intercept:

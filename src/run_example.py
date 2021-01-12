@@ -1,6 +1,6 @@
 """Small example."""
 
-import src.delay_kernel as delay
+import src.deconvolution.delay_kernel as delay
 import src.nowcast as nowcast
 
 
