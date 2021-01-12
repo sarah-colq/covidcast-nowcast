@@ -1,15 +1,15 @@
 from dataclasses import dataclass
 from typing import List, Union
 
-from numpy import nan, ndarray
+from numpy import ndarray
 
 
-@dataclass
-class LocationPoint:
-    geo_value: str = None
-    geo_type: str = None
-    date: int = None
-    value: float = nan
+@dataclass(frozen=True)
+class SignalConfig:
+    source: str = None
+    signal: str = None
+    name: str = None
+    model: str = None
 
 
 @dataclass

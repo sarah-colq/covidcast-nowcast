@@ -6,16 +6,16 @@ import numpy as np
 import covidcast
 from delphi_epidata import Epidata
 
-from ..data_containers import LocationSeries
+from ..data_containers import LocationSeries, SignalConfig
 from .model import compute_ar_sensor, compute_regression_sensor
 
 
 def get_sensors(start_date: int,
                 end_date: int,
-                sensors: List[Tuple[str, str, str, str]],
+                sensors: List[SignalConfig],
                 ground_truths: List[LocationSeries] = None,
                 compute_missing: bool = False,
-                ) -> Dict[Tuple[str, str, str, str], LocationSeries]:
+                ) -> Dict[SignalConfig, LocationSeries]:
     """
     Return sensorized values from start to end date at given locations for specified sensors.
 
@@ -47,28 +47,23 @@ def get_sensors(start_date: int,
         LocationSeries holding sensor data for a location.
     """
     output = {}
-    locations_to_get = [y for y in ground_truths if not np.all(np.isnan(y.values))]
-    unavail_loc = [y for y in ground_truths if np.all(np.isnan(y.values))]  # need to clean this up
+    locations_to_get = [y for y in ground_truths if not np.any(np.isnan(y.values))]
+    unavail_loc = [y for y in ground_truths if np.any(np.isnan(y.values))]  # need to clean this up
     if unavail_loc:
         print(f"unavailable locations {unavail_loc}")
-
-    for location in locations_to_get:
-        # should come up with an easier way to do this too.
-        ground_truth_value = [] if not compute_missing else\
-            [i for i in ground_truths if (i.geo_value, i.geo_type) == location][0]
+    for location_truth in locations_to_get:
         for sensor in sensors:
-            output[sensor] = get_sensor_values(sensor, location, start_date, end_date,
-                                               ground_truth_value, compute_missing)[0]
-
+            output[sensor] = output.get(sensor, []) + [get_sensor_values(
+                sensor, start_date, end_date, location_truth, compute_missing
+            )]
     return output
 
 
-def get_sensor_values(sensor: Tuple[str, str, str, str],
-                      location: Tuple[str, str],
+def get_sensor_values(sensor: SignalConfig,
                       start_date: int,
                       end_date: int,
                       ground_truth: LocationSeries,
-                      compute_missing: bool) -> Tuple[LocationSeries, list]:
+                      compute_missing: bool) -> LocationSeries:
     """
     Return sensorized values for a single location, using available historical data if specified.
     
@@ -76,45 +71,51 @@ def get_sensor_values(sensor: Tuple[str, str, str, str],
     ----------
     sensor
         (source, signal, sensor_name, model) tuple specifying which sensor to retrieve/compute.
-    location
-        (geo_value, geo_type) tuple specifying where to get values for.
     start_date
         first day to attempt to get sensor values for.
     end_date
         last day to attempt to get sensor values for.
     ground_truth
-        LocationSeries containing ground truth values to train against. Ignored if
-        compute_missing=False
+        LocationSeries containing ground truth values to train against. Also used to transfer geo
+        information. Values are ignored if compute_missing=False
     compute_missing
         Flag for whether or not missing values should be recomputed.
 
     Returns
     -------
-        Tuple of (LocationSeries of sensor data, dates where no values were obtained).
+        LocationSeries of sensor data.
     """
     # left out recompute_all_data argument for now just to keep things simple
     output, missing_dates = _get_historical_data(sensor, start_date, end_date)
     if not compute_missing or not missing_dates:
-        return output, missing_dates
-    indicator_values = covidcast.signal(  # gets all available data for now, could be optimized
-        sensor[0], sensor[1], geo_values=location[0], geo_type=location[1]
-    )  # reformat indicator_values to value/day pairs or a LocationSeries?
+        return output
+    # gets all available data for now, could be optimized
+    indicator_values = covidcast.signal(sensor.source,
+                                        sensor.signal,
+                                        geo_values=ground_truth.geo_value,
+                                        geo_type=ground_truth.geo_type)
+    indicator_values = LocationSeries(geo_value=ground_truth.geo_value,  # reformat dataframe
+                                      geo_type=ground_truth.geo_type,
+                                      dates=indicator_values.time_value,
+                                      values=indicator_values.value)
     for date in missing_dates:
-        if sensor[3] == "ar":
+        if sensor.model == "ar":
             sensor_value = compute_ar_sensor(date, indicator_values)
-        elif sensor[3] == "regression":
+        elif sensor.model == "regression":
             sensor_value = compute_regression_sensor(date, indicator_values, ground_truth)
         else:
             raise ValueError("Invalid sensorization method. Must be 'ar' or 'regression'")
         output.values.append(sensor_value)  # what if its a numpy array? would need to change method
         output.dates.append(date)
         _export_to_csv(sensor_value)
-    return output, missing_dates
+    return output
 
 
 def _get_historical_data(indicator, min_date, max_date) -> Tuple[LocationSeries, list]:
     """Query Epidata API for historical sensorization data."""
-    Epidata.covidcast_nowcast(source=indicator[0], signal=indicator[1], sensor_name=indicator[3])
+    Epidata.covidcast_nowcast(source=indicator.source,
+                              signal=indicator.signal,
+                              sensor_name=indicator.model)
     # convert data to proper format (list of(value, date) tuples?)
     # compute missing dates between min_date and max date
     # return data, missing_dates

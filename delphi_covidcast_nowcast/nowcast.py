@@ -4,13 +4,13 @@ from typing import List, Tuple
 
 import numpy as np
 
-import src.deconvolution.deconvolution as deconv
-
+from .deconvolution.deconvolution import deconvolve_signal
+from .data_containers import SignalConfig
 
 def nowcast(input_dates: List[int],
             input_locations: List[Tuple[str, str]],
-            sensor_indicators: List[Tuple[str, str]],
-            convolved_truth_indicator: Tuple[str, str],
+            sensor_indicators: List[SignalConfig],
+            convolved_truth_indicator: SignalConfig,
             kernel: List[float],
             nowcast_dates: List[int] = "*",
             ) -> Tuple[np.ndarray, np.ndarray, List]:
@@ -38,8 +38,8 @@ def nowcast(input_dates: List[int],
     # get geo mappings
 
     # deconvolve for ground truth
-    ground_truth = deconv.deconvolve_signal(convolved_truth_indicator, input_dates,
-                                            input_locations, np.array(kernel))
+    ground_truth = deconvolve_signal(convolved_truth_indicator, input_dates,
+                                     input_locations, np.array(kernel))
 
     # fit sensors
     # generate statespace

@@ -8,8 +8,7 @@ from delphi_epidata import Epidata
 from scipy.linalg import toeplitz
 from scipy.sparse import diags as band
 
-from src.data_containers import LocationSeries
-
+from ..data_containers import LocationSeries, SignalConfig
 
 class TempEpidata:
 
@@ -206,7 +205,7 @@ class CrossValidation:
         return imputed_x
 
 
-def deconvolve_signal(convolved_truth_indicator: Tuple[str, str],
+def deconvolve_signal(convolved_truth_indicator: SignalConfig,
                       input_dates: List[int],
                       input_locations: List[Tuple[str, str]],
                       kernel: np.ndarray
@@ -250,8 +249,8 @@ def deconvolve_signal(convolved_truth_indicator: Tuple[str, str],
         # note: returns signal over input dates, continuous. addtl filtering needed if
         # input dates is not continuous/missing dates. We can't filter here, because
         # deconvolution requires a complete time series.
-        convolved_truth = TempEpidata.get_signal_range(convolved_truth_indicator[0],
-                                                       convolved_truth_indicator[1],
+        convolved_truth = TempEpidata.get_signal_range(convolved_truth_indicator.source,
+                                                       convolved_truth_indicator.signal,
                                                        input_dates[0], input_dates[-1],
                                                        geo_type, loc)
 

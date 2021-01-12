@@ -1,7 +1,7 @@
 """Small example."""
 
-import src.deconvolution.delay_kernel as delay
-import src.nowcast as nowcast
+import delphi_covidcast_nowcast.deconvolution.delay_kernel as delay
+import delphi_covidcast_nowcast.nowcast as nowcast
 
 
 def main():
