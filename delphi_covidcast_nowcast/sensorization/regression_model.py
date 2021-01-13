@@ -7,7 +7,7 @@ def compute_regression_sensor(date: int,
                               covariate: LocationSeries,
                               response: LocationSeries,
                               include_intercept=False,
-                              lambda_=0.1) -> float:
+                              lambda_: float = 0.1) -> float:
     """
     Fit regression model and get sensorization value for a given date.
 
@@ -40,11 +40,11 @@ def compute_regression_sensor(date: int,
     # fill in gaps in data if any missing dates (e.g. polynomial imputation)?
     idx = covariate.dates.index(date)
     train_Y = response.values[:idx]
-    train_X_covariates = covariate.values[:idx]
+    train_covariates = covariate.values[:idx]
     # error if not enough data in either values or response
 
-    predict_X = np.hstack((1, covariate.values[idx])) if include_intercept else covariate.values[idx]
-    X = np.ones((len(train_X_covariates), 1 + include_intercept))
-    X[:, -1] = train_X_covariates
+    date_X = np.hstack((1, covariate.values[idx])) if include_intercept else covariate.values[idx]
+    X = np.ones((len(train_covariates), 1 + include_intercept))
+    X[:, -1] = train_covariates
     B = np.linalg.inv(X.T @ X + lambda_ * np.eye(1 + include_intercept)) @ X.T @ train_Y
-    return predict_X @ B
+    return date_X @ B
