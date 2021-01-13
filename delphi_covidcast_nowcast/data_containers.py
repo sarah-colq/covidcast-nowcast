@@ -9,7 +9,6 @@ class SignalConfig:
     source: str = None
     signal: str = None
     name: str = None
-    model: str = None
 
 
 @dataclass

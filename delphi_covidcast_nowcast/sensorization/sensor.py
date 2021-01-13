@@ -53,18 +53,46 @@ def get_sensors(start_date: int,
     if unavail_loc:
         print(f"unavailable locations {unavail_loc}")
     for location_truth in locations_to_get:
+        output["ground_truth_ar"] = output.get("ground_truth_ar", []) + [get_ar_sensor_values(
+            location_truth, start_date, end_date
+        )]
         for sensor in sensors:
-            output[sensor] = output.get(sensor, []) + [get_sensor_values(
+            output[sensor] = output.get(sensor, []) + [get_regression_sensor_values(
                 sensor, start_date, end_date, location_truth, compute_missing
             )]
     return output
 
 
-def get_sensor_values(sensor: SignalConfig,
-                      start_date: int,
-                      end_date: int,
-                      ground_truth: LocationSeries,
-                      compute_missing: bool) -> LocationSeries:
+def get_ar_sensor_values(values: LocationSeries,
+                         start_date: int,
+                         end_date: int) -> LocationSeries:
+    """
+
+    Parameters
+    ----------
+    values
+    start_date
+    end_date
+
+    Returns
+    -------
+
+    """
+    output = LocationSeries(values.geo_value, values.geo_type, [], [])
+    for day in [int(i.strftime("%Y%m%d")) for i in date_range(str(start_date), str(end_date))]:
+        sensor_value = compute_ar_sensor(day, values)
+        if np.isnan(sensor_value):
+            continue
+        output.values.append(sensor_value)  # if np array would need to change append method
+        output.dates.append(day)
+    return output
+
+
+def get_regression_sensor_values(sensor: SignalConfig,
+                                 start_date: int,
+                                 end_date: int,
+                                 ground_truth: LocationSeries,
+                                 compute_missing: bool) -> LocationSeries:
     """
     Return sensorized values for a single location, using available historical data if specified.
     
@@ -87,11 +115,21 @@ def get_sensor_values(sensor: SignalConfig,
         LocationSeries of sensor data.
     """
     # left out recompute_all_data argument for now just to keep things simple
-    output, missing_dates = _get_historical_data(sensor,
-                                                 ground_truth.geo_type,
-                                                 ground_truth.geo_value,
-                                                 start_date,
-                                                 end_date)
+
+    ############### COMMENT OUT FOR TESTING ###############
+    output, missing_dates = _get_historical_data(
+        sensor, ground_truth.geo_type, ground_truth.geo_value,  start_date, end_date
+    )
+    # TESTING IMPLEMENTATION, UNCOMMENT THIS
+    # output = LocationSeries(
+    #     dates=[],
+    #     values=[],
+    #     geo_value=ground_truth.geo_value,
+    #     geo_type=ground_truth.geo_type
+    # )
+    # missing_dates = [int(i.strftime("%Y%m%d")) for i in date_range(str(start_date), str(end_date))]
+    # #########################################################
+
     if not compute_missing or not missing_dates:
         return output
     # gets all available data for now, could be optimized
@@ -112,16 +150,12 @@ def get_sensor_values(sensor: SignalConfig,
         values=[i["value"] for i in response["epidata"] if not np.isnan(i["value"])]
     )
     for day in missing_dates:
-        if sensor.model == "ar":
-            sensor_value = compute_ar_sensor(day, indicator_values)
-        elif sensor.model == "regression":
-            sensor_value = compute_regression_sensor(day, indicator_values, ground_truth)
-        else:
-            raise ValueError("Invalid sensorization method. Must be 'ar' or 'regression'")
+        sensor_value = compute_regression_sensor(day, indicator_values, ground_truth)
+        if np.isnan(sensor_value):
+            continue
         output.values.append(sensor_value)  # if np array would need to change append method
         output.dates.append(day)
-        # commented out for now
-        # _export_to_csv(sensor_value, sensor, ground_truth.geo_type, ground_truth.geo_value, date)
+        # _export_to_csv(sensor_value, sensor, ground_truth.geo_type, ground_truth.geo_value, date) # commented out for now
     return output
 
 
@@ -163,14 +197,24 @@ def _get_historical_data(indicator: SignalConfig,
                                          time_values=Epidata.range(start_date, end_date),
                                          geo_value=geo_value)
                                          # sensor_name=indicator.model) not added to DB yet.
-    if response["result"] != 1:
+    if response["result"] == 1:
+        output = LocationSeries(
+            dates=[i["time_value"] for i in response["epidata"] if not np.isnan(i["value"])],
+            values=[i["value"] for i in response["epidata"] if not np.isnan(i["value"])],
+            geo_value=geo_value,
+            geo_type=geo_type
+        )
+    elif response["result"] == -2:  # no results
+        print("no historical results found")
+        output = LocationSeries(
+            dates=[],
+            values=[],
+            geo_value=geo_value,
+            geo_type=geo_type
+        )
+    else:
         raise Exception(f"Bad result from Epidata: {response['message']}")
-    output = LocationSeries(
-        dates=[i["time_value"] for i in response["epidata"] if not np.isnan(i["value"])],
-        values=[i["value"] for i in response["epidata"] if not np.isnan(i["value"])],
-        geo_value=geo_value,
-        geo_type=geo_type
-    )
+
     all_dates = [int(i.strftime("%Y%m%d")) for i in date_range(str(start_date), str(end_date))]
     missing_dates = [i for i in all_dates if i not in output.dates]
     return output, missing_dates

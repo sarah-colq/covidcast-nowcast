@@ -39,8 +39,9 @@ def compute_ar_sensor(date: int,
     """
     # fill in gaps in data if any missing dates (e.g. polynomial imputation)?
     idx = values.dates.index(date)
-    Yhat = ar_predict(idx, np.array(values.values), ar_size, include_intercept, lambda_)[1]
-
+    Yhat = ar_predict(idx, np.array(values.values), ar_size, include_intercept, lambda_)
+    if Yhat is None:
+        return np.nan
     # should we set a seed here?
     # np.random.seed(date) maybe?
 
@@ -92,5 +93,5 @@ def ar_predict(idx, values, ar_size, include_intercept, lambda_):
         x = np.hstack((x, [[1]]))
 
     # return model and estimate at `idx`
-    return B, (x @ B)[0, 0]
+    return (x @ B)[0, 0]
 
