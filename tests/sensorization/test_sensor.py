@@ -28,7 +28,7 @@ class TestGetSensors:
         test_ground_truths = [LocationSeries(geo_value="ca", geo_type="state", values=[np.nan, 1]),
                               LocationSeries(geo_value="pa", geo_type="state", values=[2, 3]),
                               LocationSeries(geo_value="ak", geo_type="state", values=[4, 5])]
-        assert get_sensors(None, None, test_sensors, test_ground_truths, True) == {
+        assert get_sensors(None, None, test_sensors, test_ground_truths, True, True) == {
             "ground_truth_ar": [LocationSeries("i"), LocationSeries("j")],
             SignalConfig("src1", "sigA", ): [LocationSeries("w"), LocationSeries("y")],
             SignalConfig("src2", "sigB", ): [LocationSeries("x"), LocationSeries("z")]
@@ -42,7 +42,7 @@ class TestGetSensors:
         test_ground_truths = [LocationSeries(geo_value="ca", geo_type="state", values=[np.nan, 1]),
                               LocationSeries(geo_value="pa", geo_type="state", values=[2, 3]),
                               LocationSeries(geo_value="ak", geo_type="state", values=[4, 5])]
-        assert get_sensors(None, None, [], test_ground_truths, True) == {
+        assert get_sensors(None, None, [], test_ground_truths, True, True) == {
             "ground_truth_ar": [LocationSeries("i"), LocationSeries("j")],
         }
 
@@ -65,20 +65,20 @@ class TestGetRegressionSensorValues:
         """Test output is just returned if no missing dates"""
         historical.return_value = ("output", [])
         test_ground_truth = LocationSeries(geo_value="ca", geo_type="state")
-        assert get_regression_sensor_values(None, None, None, test_ground_truth, True) == "output"
+        assert get_regression_sensor_values(None, None, None, test_ground_truth, True, True) == "output"
 
     @patch("delphi_covidcast_nowcast.sensorization.sensor._get_historical_data")
     def test_get_regression_sensor_values_no_compute(self, historical):
         """Test output is just returned in compute_missing=False"""
         historical.return_value = ("output", [20200101])
         test_ground_truth = LocationSeries(geo_value="ca", geo_type="state")
-        assert get_regression_sensor_values(None, None, None, test_ground_truth, False) == "output"
+        assert get_regression_sensor_values(None, None, None, test_ground_truth, False, True) == "output"
 
     @patch("delphi_covidcast_nowcast.sensorization.sensor.Epidata.covidcast")
     @patch("delphi_covidcast_nowcast.sensorization.sensor.compute_regression_sensor")
     @patch("delphi_covidcast_nowcast.sensorization.sensor._get_historical_data")
     @patch("delphi_covidcast_nowcast.sensorization.sensor._export_to_csv")
-    def test_get_regression_sensor_values_compute(self, export_csv, historical, compute_regression_sensor, covidcast):
+    def test_get_regression_sensor_values_compute_latest(self, export_csv, historical, compute_regression_sensor, covidcast):
         """Test computation functions are called for missing dates"""
         export_csv.return_value = None
         historical.return_value = (LocationSeries(values=[], dates=[]), [20200101, 20200102])
@@ -87,9 +87,46 @@ class TestGetRegressionSensorValues:
         test_ground_truth = LocationSeries(geo_value="ca", geo_type="state")
 
         regression_sensors = SignalConfig()
-        assert get_regression_sensor_values(regression_sensors, None, None, test_ground_truth, True) == \
+        assert get_regression_sensor_values(regression_sensors, None, None, test_ground_truth, True, True) == \
                LocationSeries(values=[1.0], dates=[20200102])
+        assert covidcast.call_count == 1
+        covidcast.assert_called_once_with(data_source=None,
+                                          signals=None,
+                                          time_type='day',
+                                          time_values={'from': 20200101, 'to': 20200102},
+                                          geo_value='ca',
+                                           geo_type='state')
 
+    @patch("delphi_covidcast_nowcast.sensorization.sensor.Epidata.covidcast")
+    @patch("delphi_covidcast_nowcast.sensorization.sensor.compute_regression_sensor")
+    @patch("delphi_covidcast_nowcast.sensorization.sensor._get_historical_data")
+    @patch("delphi_covidcast_nowcast.sensorization.sensor._export_to_csv")
+    def test_get_regression_sensor_values_compute_as_of(self, export_csv, historical, compute_regression_sensor, covidcast):
+        """Test computation functions are called for missing dates"""
+        export_csv.return_value = None
+        historical.return_value = (LocationSeries(values=[], dates=[]), [20200101, 20200102])
+        compute_regression_sensor.side_effect = [np.nan, 1.0]
+        covidcast.return_value = {"result": 1, "epidata": [{"time_value": 0, "value": 0}]}
+        test_ground_truth = LocationSeries(geo_value="ca", geo_type="state")
+
+        regression_sensors = SignalConfig()
+        assert get_regression_sensor_values(regression_sensors, None, None, test_ground_truth, True, False) == \
+               LocationSeries(values=[1.0], dates=[20200102])
+        assert covidcast.call_count == 2
+        covidcast.assert_any_call(data_source=None,
+                                  signals=None,
+                                  time_type='day',
+                                  time_values={'from': 20200101, 'to': 20200101},
+                                  geo_value='ca',
+                                  geo_type='state',
+                                  as_of=20200101)
+        covidcast.assert_any_call(data_source=None,
+                                  signals=None,
+                                  time_type='day',
+                                  time_values={'from': 20200101, 'to': 20200102},
+                                  geo_value='ca',
+                                  geo_type='state',
+                                  as_of=20200102)
 
 class TestGetHistorcalData:
 

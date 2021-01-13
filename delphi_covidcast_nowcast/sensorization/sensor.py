@@ -14,8 +14,9 @@ from .regression_model import compute_regression_sensor
 def get_sensors(start_date: int,
                 end_date: int,
                 sensors: List[SignalConfig],
-                ground_truths: List[LocationSeries] = None,
-                compute_missing: bool = False,
+                ground_truths: List[LocationSeries],
+                compute_missing: bool,
+                use_latest_issue: bool,
                 ) -> Dict[SignalConfig, LocationSeries]:
     """
     Return sensorized values from start to end date at given locations for specified sensors.
@@ -41,6 +42,9 @@ def get_sensors(start_date: int,
     compute_missing
         boolean specifying whether the function should attempt to compute any dates which
         were not retrieved from historical data. Defaults to False.
+    use_latest_issue
+        boolean specifying whether to use the latest issue to compute missing sensor values. If
+        False, will use the data that was available as of the target date.
 
     Returns
     -------
@@ -58,7 +62,7 @@ def get_sensors(start_date: int,
         )]
         for sensor in sensors:
             output[sensor] = output.get(sensor, []) + [get_regression_sensor_values(
-                sensor, start_date, end_date, location_truth, compute_missing
+                sensor, start_date, end_date, location_truth, compute_missing, use_latest_issue
             )]
     return output
 
@@ -92,7 +96,8 @@ def get_regression_sensor_values(sensor: SignalConfig,
                                  start_date: int,
                                  end_date: int,
                                  ground_truth: LocationSeries,
-                                 compute_missing: bool) -> LocationSeries:
+                                 compute_missing: bool,
+                                 use_latest_issue: bool) -> LocationSeries:
     """
     Return sensorized values for a single location, using available historical data if specified.
 
@@ -112,6 +117,9 @@ def get_regression_sensor_values(sensor: SignalConfig,
         information. Values are ignored if compute_missing=False
     compute_missing
         Flag for whether or not missing values should be recomputed.
+    use_latest_issue
+        boolean specifying whether to use the latest issue to compute missing sensor values. If
+        False, will use the data that was available as of the target date.
 
     Returns
     -------
@@ -135,24 +143,39 @@ def get_regression_sensor_values(sensor: SignalConfig,
 
     if not compute_missing or not missing_dates:
         return output
-    # gets all available data for now, could be optimized
-    response = Epidata.covidcast(data_source=sensor.source,
-                                 signals=sensor.signal,
-                                 time_type="day",
-                                 time_values=Epidata.range(
-                                     20200101,
-                                     int(date.today().strftime("%Y%m%d"))),
-                                 geo_value=ground_truth.geo_value,
-                                 geo_type=ground_truth.geo_type)
-    if response["result"] != 1:
-        raise Exception(f"Bad result from Epidata: {response['message']}")
-    indicator_values = LocationSeries(
-        geo_value=ground_truth.geo_value,
-        geo_type=ground_truth.geo_type,
-        dates=[i["time_value"] for i in response["epidata"] if not np.isnan(i["value"])],
-        values=[i["value"] for i in response["epidata"] if not np.isnan(i["value"])]
-    )
+    # gets all available data for now, could be optimized to only get a window
+    if use_latest_issue:
+        response = Epidata.covidcast(data_source=sensor.source,
+                                     signals=sensor.signal,
+                                     time_type="day",
+                                     time_values=Epidata.range(20200101, max(missing_dates)),
+                                     geo_value=ground_truth.geo_value,
+                                     geo_type=ground_truth.geo_type)
+        if response["result"] != 1:
+            raise Exception(f"Bad result from Epidata: {response['message']}")
+        indicator_values = LocationSeries(
+            geo_value=ground_truth.geo_value,
+            geo_type=ground_truth.geo_type,
+            dates=[i["time_value"] for i in response["epidata"] if not np.isnan(i["value"])],
+            values=[i["value"] for i in response["epidata"] if not np.isnan(i["value"])]
+        )
     for day in missing_dates:
+        if not use_latest_issue:
+            response = Epidata.covidcast(data_source=sensor.source,
+                                         signals=sensor.signal,
+                                         time_type="day",
+                                         time_values=Epidata.range(20200101, day),
+                                         geo_value=ground_truth.geo_value,
+                                         geo_type=ground_truth.geo_type,
+                                         as_of=day)
+            if response["result"] != 1:
+                raise Exception(f"Bad result from Epidata: {response['message']}")
+            indicator_values = LocationSeries(
+                geo_value=ground_truth.geo_value,
+                geo_type=ground_truth.geo_type,
+                dates=[i["time_value"] for i in response["epidata"] if not np.isnan(i["value"])],
+                values=[i["value"] for i in response["epidata"] if not np.isnan(i["value"])]
+            )
         sensor_value = compute_regression_sensor(day, indicator_values, ground_truth)
         if np.isnan(sensor_value):
             continue
