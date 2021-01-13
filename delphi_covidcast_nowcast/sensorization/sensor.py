@@ -95,6 +95,9 @@ def get_regression_sensor_values(sensor: SignalConfig,
                                  compute_missing: bool) -> LocationSeries:
     """
     Return sensorized values for a single location, using available historical data if specified.
+
+    If new values are to be computed, they currently are done with the most recent issue of data,
+    as opposed to the data available as_of the desired date.
     
     Parameters
     ----------
