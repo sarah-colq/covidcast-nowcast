@@ -34,6 +34,19 @@ class TestGetSensors:
             SignalConfig("src2", "sigB", ): [LocationSeries("x"), LocationSeries("z")]
         }
 
+    @patch("delphi_covidcast_nowcast.sensorization.sensor.get_ar_sensor_values")
+    def test_get_sensors_ar_only(self, get_ar_sensor_values):
+        """Test that not passing in sensors works"""
+        get_ar_sensor_values.side_effect = [LocationSeries("i"),
+                                            LocationSeries("j")]
+        test_ground_truths = [LocationSeries(geo_value="ca", geo_type="state", values=[np.nan, 1]),
+                              LocationSeries(geo_value="pa", geo_type="state", values=[2, 3]),
+                              LocationSeries(geo_value="ak", geo_type="state", values=[4, 5])]
+        assert get_sensors(None, None, [], test_ground_truths, True) == {
+            "ground_truth_ar": [LocationSeries("i"), LocationSeries("j")],
+        }
+
+
 class TestGetARSensorValues:
 
     @patch("delphi_covidcast_nowcast.sensorization.sensor.compute_ar_sensor")
@@ -61,7 +74,6 @@ class TestGetRegressionSensorValues:
         test_ground_truth = LocationSeries(geo_value="ca", geo_type="state")
         assert get_regression_sensor_values(None, None, None, test_ground_truth, False) == "output"
 
-
     @patch("delphi_covidcast_nowcast.sensorization.sensor.Epidata.covidcast")
     @patch("delphi_covidcast_nowcast.sensorization.sensor.compute_regression_sensor")
     @patch("delphi_covidcast_nowcast.sensorization.sensor._get_historical_data")
@@ -69,14 +81,14 @@ class TestGetRegressionSensorValues:
     def test_get_regression_sensor_values_compute(self, export_csv, historical, compute_regression_sensor, covidcast):
         """Test computation functions are called for missing dates"""
         export_csv.return_value = None
-        historical.return_value = (LocationSeries(values=[], dates=[]), [20200101])
-        compute_regression_sensor.return_value = 1.0
+        historical.return_value = (LocationSeries(values=[], dates=[]), [20200101, 20200102])
+        compute_regression_sensor.side_effect = [np.nan, 1.0]
         covidcast.return_value = {"result": 1, "epidata": [{"time_value": 0, "value": 0}]}
         test_ground_truth = LocationSeries(geo_value="ca", geo_type="state")
 
-        regression_sensor = SignalConfig()
-        assert get_regression_sensor_values(regression_sensor, None, None, test_ground_truth, True) == \
-               LocationSeries(values=[1.0], dates=[20200101])
+        regression_sensors = SignalConfig()
+        assert get_regression_sensor_values(regression_sensors, None, None, test_ground_truth, True) == \
+               LocationSeries(values=[1.0], dates=[20200102])
 
 
 class TestGetHistorcalData:
