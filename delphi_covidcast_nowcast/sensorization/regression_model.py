@@ -37,15 +37,20 @@ def compute_regression_sensor(date: int,
     -------
         Float value of sensor on `date`
     """
-    # fill in gaps in data if any missing dates (e.g. polynomial imputation)?
-    idx = response.dates.index(date)
-    train_Y = response.values[:idx]
-    train_covariates = covariate.values[idx-len(train_Y):idx]  # assume more covariate than response data for now
+    start_date = max(min(covariate.dates), min(response.dates))
+    # dont want date itself so cut last one, need to clean this up
+    train_Y = response.get_data_range(start_date, date, None)[:-1]
+    train_covariates = covariate.get_data_range(start_date, date, None)[:-1]
+    train_Y, train_covariates = zip(  # only get pairs where both are not nan
+        *[(i, j) for i, j in zip(train_Y, train_covariates) if not (np.isnan(i) or np.isnan(j))]
+    )
     if len(train_Y) < 5:  # some arbitrary min num observations:
         return np.nan
-    date_X = np.hstack((1, covariate.values[idx])) if include_intercept else \
-        np.array([covariate.values[idx]])
+    train_Y = np.array(train_Y)
+    train_covariates = np.array(train_covariates)
     X = np.ones((len(train_covariates), 1 + include_intercept))
     X[:, -1] = train_covariates
     B = np.linalg.inv(X.T @ X + lambda_ * np.eye(1 + include_intercept)) @ X.T @ train_Y
+    date_val = covariate.get_value(date)
+    date_X = np.array((1, date_val)) if include_intercept else np.array([date_val])
     return date_X @ B

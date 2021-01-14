@@ -37,9 +37,8 @@ def compute_ar_sensor(date: int,
     -------
         Float value of sensor on `date`
     """
-    # fill in gaps in data if any missing dates (e.g. polynomial imputation)?
-    idx = values.dates.index(date)
-    Yhat = ar_predict(idx, np.array(values.values), ar_size, include_intercept, lambda_)
+    window = values.get_data_range(min(values.dates), date)
+    Yhat = ar_predict(len(window)-1, np.array(values.values), ar_size, include_intercept, lambda_)
     if Yhat is None:
         return np.nan
     # should we set a seed here?
