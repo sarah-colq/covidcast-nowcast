@@ -1,14 +1,16 @@
 """Functions to run sensorization."""
 import os
-from typing import List, Tuple, Dict
-from datetime import date
-import numpy as np
-from pandas import date_range
-from delphi_epidata import Epidata
+from typing import List, Tuple, DefaultDict
+from collections import defaultdict
 
-from ..data_containers import LocationSeries, SignalConfig
+
+import numpy as np
+from delphi_epidata import Epidata
+from pandas import date_range
+
 from .ar_model import compute_ar_sensor
 from .regression_model import compute_regression_sensor
+from ..data_containers import LocationSeries, SignalConfig
 
 
 def get_sensors(start_date: int,
@@ -17,7 +19,7 @@ def get_sensors(start_date: int,
                 ground_truths: List[LocationSeries],
                 compute_missing: bool,
                 use_latest_issue: bool,
-                ) -> Dict[SignalConfig, LocationSeries]:
+                ) -> DefaultDict[SignalConfig, List[LocationSeries]]:
     """
     Return sensorized values from start to end date at given locations for specified sensors.
 
@@ -51,19 +53,17 @@ def get_sensors(start_date: int,
         Dict where keys are sensor tuples and values are lists, where each list element is a
         LocationSeries holding sensor data for a location.
     """
-    output = {}
+    output = defaultdict(list)
     locations_to_get = [y for y in ground_truths if not np.any(np.isnan(y.values))]
     unavail_loc = [y for y in ground_truths if np.any(np.isnan(y.values))]  # need to clean this up
     if unavail_loc:
         print(f"unavailable locations {unavail_loc}")
     for location_truth in locations_to_get:
-        output["ground_truth_ar"] = output.get("ground_truth_ar", []) + [get_ar_sensor_values(
-            location_truth, start_date, end_date
-        )]
+        output["ground_truth_ar"].append(get_ar_sensor_values(location_truth, start_date, end_date))
         for sensor in sensors:
-            output[sensor] = output.get(sensor, []) + [get_regression_sensor_values(
+            output[sensor].append(get_regression_sensor_values(
                 sensor, start_date, end_date, location_truth, compute_missing, use_latest_issue
-            )]
+            ))
     return output
 
 
@@ -87,8 +87,7 @@ def get_ar_sensor_values(values: LocationSeries,
         sensor_value = compute_ar_sensor(day, values)
         if np.isnan(sensor_value):
             continue
-        output.values.append(sensor_value)  # if np array would need to change append method
-        output.dates.append(day)
+        output.add_data(day, sensor_value)  # if np array would need to change append method
     return output
 
 
@@ -179,8 +178,7 @@ def get_regression_sensor_values(sensor: SignalConfig,
         sensor_value = compute_regression_sensor(day, indicator_values, ground_truth)
         if np.isnan(sensor_value):
             continue
-        output.values.append(sensor_value)  # if np array would need to change append method
-        output.dates.append(day)
+        output.add_data(day, sensor_value)  # if np array would need to change append method
         # _export_to_csv(sensor_value, sensor, ground_truth.geo_type, ground_truth.geo_value, date) # commented out for now
     return output
 
@@ -232,12 +230,7 @@ def _get_historical_data(indicator: SignalConfig,
         )
     elif response["result"] == -2:  # no results
         print("no historical results found")
-        output = LocationSeries(
-            dates=[],
-            values=[],
-            geo_value=geo_value,
-            geo_type=geo_type
-        )
+        output = LocationSeries(geo_value=geo_value, geo_type=geo_type)
     else:
         raise Exception(f"Bad result from Epidata: {response['message']}")
 

@@ -25,9 +25,10 @@ class TestGetSensors:
                                             LocationSeries("j")]
         test_sensors = [SignalConfig("src1", "sigA"),
                         SignalConfig("src2", "sigB")]
-        test_ground_truths = [LocationSeries(geo_value="ca", geo_type="state", values=[np.nan, 1]),
-                              LocationSeries(geo_value="pa", geo_type="state", values=[2, 3]),
-                              LocationSeries(geo_value="ak", geo_type="state", values=[4, 5])]
+        test_ground_truths = [
+            LocationSeries(geo_value="ca", geo_type="state", values=[np.nan, 1], dates=[None, None]),
+            LocationSeries(geo_value="pa", geo_type="state", values=[2, 3], dates=[None, None]),
+            LocationSeries(geo_value="ak", geo_type="state", values=[4, 5], dates=[None, None])]
         assert get_sensors(None, None, test_sensors, test_ground_truths, True, True) == {
             "ground_truth_ar": [LocationSeries("i"), LocationSeries("j")],
             SignalConfig("src1", "sigA", ): [LocationSeries("w"), LocationSeries("y")],
@@ -39,9 +40,10 @@ class TestGetSensors:
         """Test that not passing in sensors works"""
         get_ar_sensor_values.side_effect = [LocationSeries("i"),
                                             LocationSeries("j")]
-        test_ground_truths = [LocationSeries(geo_value="ca", geo_type="state", values=[np.nan, 1]),
-                              LocationSeries(geo_value="pa", geo_type="state", values=[2, 3]),
-                              LocationSeries(geo_value="ak", geo_type="state", values=[4, 5])]
+        test_ground_truths = [
+            LocationSeries(geo_value="ca", geo_type="state", values=[np.nan, 1], dates=[None, None]),
+            LocationSeries(geo_value="pa", geo_type="state", values=[2, 3], dates=[None, None]),
+            LocationSeries(geo_value="ak", geo_type="state", values=[4, 5], dates=[None, None])]
         assert get_sensors(None, None, [], test_ground_truths, True, True) == {
             "ground_truth_ar": [LocationSeries("i"), LocationSeries("j")],
         }
