@@ -1,0 +1,5 @@
+covidcast
+matplotlib
+numpy
+pandas
+tensorflow
