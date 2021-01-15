@@ -7,6 +7,7 @@ class Model(tf.keras.Model):
     Simple convolutional model for fitting leading indicators to case counts
     Attributes:
         p: Size of the pd kernel
+        m (int): Number of geo_values
         p_conv: Convolutional layer for p_d kernel
     """
 
@@ -15,6 +16,7 @@ class Model(tf.keras.Model):
         """
         Args:
             p (int): Size of the p_d kernel
+            m (int): Number of geo_values
             p_conv: Convolutional layer for p_d kernel
         """
         assert p > 0 and isinstance(
