@@ -7,6 +7,7 @@ from delphi_covidcast_nowcast.data_containers import LocationSeries
 class TestComputeRegressionSensor:
 
     def test_compute_regression_sensor_intercept(self):
+        """Verified with lm(y~x)."""
         test_covariate = LocationSeries(values=[1, 3, 5, 6, 7, 9, 12],
                                         dates=[20200101, 20200102, 20200103, 20200104, 20200105,
                                                20200106, 20200107])
@@ -19,6 +20,7 @@ class TestComputeRegressionSensor:
         )
 
     def test_compute_regression_sensor_no_intercept(self):
+        """Verified with lm(y~x-1)."""
         test_covariate = LocationSeries(values=[1, 3, 5, 6, 7, 9, 12],
                                         dates=[20200101, 20200102, 20200103, 20200104, 20200105,
                                                20200106, 20200107])
