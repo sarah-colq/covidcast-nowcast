@@ -6,8 +6,7 @@ from ..data_containers import LocationSeries
 def compute_regression_sensor(date: int,
                               covariate: LocationSeries,
                               response: LocationSeries,
-                              include_intercept=False,
-                              lambda_: float = 0.1) -> float:
+                              include_intercept: bool = False) -> float:
     """
     Fit regression model and get sensorization value for a given date.
 
@@ -30,8 +29,6 @@ def compute_regression_sensor(date: int,
         LocationSeries containing response values.
     include_intercept
         Boolean on whether or not to include intercept.
-    lambda_
-        l2 regularization coefficient
 
     Returns
     -------
@@ -50,7 +47,7 @@ def compute_regression_sensor(date: int,
     train_covariates = np.array(train_covariates)
     X = np.ones((len(train_covariates), 1 + include_intercept))
     X[:, -1] = train_covariates
-    B = np.linalg.inv(X.T @ X + lambda_ * np.eye(1 + include_intercept)) @ X.T @ train_Y
+    B = np.linalg.inv(X.T @ X) @ X.T @ train_Y
     date_val = covariate.get_value(date)
     date_X = np.array((1, date_val)) if include_intercept else np.array([date_val])
     return date_X @ B

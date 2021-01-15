@@ -1,14 +1,13 @@
-from unittest.mock import patch, MagicMock
 import os
-
-import pytest
-import numpy as np
 import tempfile
+from unittest.mock import patch
 
-from delphi_covidcast_nowcast.sensorization.sensor import \
-    get_sensors, get_regression_sensor_values, get_ar_sensor_values,\
-    _get_historical_data, _export_to_csv
+import numpy as np
+
 from delphi_covidcast_nowcast.data_containers import LocationSeries, SignalConfig
+from delphi_covidcast_nowcast.sensorization.sensor import \
+    get_sensors, get_regression_sensor_values, get_ar_sensor_values, \
+    _get_historical_data, _export_to_csv
 
 
 class TestGetSensors:
