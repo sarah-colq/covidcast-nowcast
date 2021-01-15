@@ -61,3 +61,6 @@ class TestComputeRegressionSensor:
             values=[-4.27815483, -4.83962077],
             dates=[20200101, 20200102])
         assert np.isnan(compute_ar_sensor(20200102, values))
+
+    def test_compute_regression_sensor_regularize(self):
+        pass

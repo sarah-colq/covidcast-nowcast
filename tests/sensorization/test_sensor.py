@@ -66,14 +66,27 @@ class TestGetRegressionSensorValues:
         """Test output is just returned if no missing dates"""
         historical.return_value = ("output", [])
         test_ground_truth = LocationSeries(geo_value="ca", geo_type="state")
-        assert get_regression_sensor_values(None, None, None, test_ground_truth, True, True) == "output"
+        assert get_regression_sensor_values(None, None, None, test_ground_truth, True, True) == \
+               "output"
 
     @patch("delphi_covidcast_nowcast.sensorization.sensor._get_historical_data")
     def test_get_regression_sensor_values_no_compute(self, historical):
         """Test output is just returned in compute_missing=False"""
         historical.return_value = ("output", [20200101])
         test_ground_truth = LocationSeries(geo_value="ca", geo_type="state")
-        assert get_regression_sensor_values(None, None, None, test_ground_truth, False, True) == "output"
+        assert get_regression_sensor_values(None, None, None, test_ground_truth, False, True) == \
+               "output"
+
+    @patch("delphi_covidcast_nowcast.sensorization.sensor.Epidata.covidcast")
+    @patch("delphi_covidcast_nowcast.sensorization.sensor._get_historical_data")
+    def test_get_regression_sensor_values_no_results(self, historical, covidcast):
+        """Test output is just returned in covidcast API has no results"""
+        historical.return_value = ("output", [20200101])
+        covidcast.return_value = {"result": -2}
+        regression_sensors = SignalConfig(source="test", signal="test")
+        test_ground_truth = LocationSeries(geo_value="ca", geo_type="state")
+        assert get_regression_sensor_values(regression_sensors, None, None, test_ground_truth, True,
+                                            True) == "output"
 
     @patch("delphi_covidcast_nowcast.sensorization.sensor.Epidata.covidcast")
     @patch("delphi_covidcast_nowcast.sensorization.sensor.compute_regression_sensor")
@@ -96,7 +109,7 @@ class TestGetRegressionSensorValues:
                                           time_type='day',
                                           time_values={'from': 20200101, 'to': 20200102},
                                           geo_value='ca',
-                                           geo_type='state')
+                                          geo_type='state')
 
     @patch("delphi_covidcast_nowcast.sensorization.sensor.Epidata.covidcast")
     @patch("delphi_covidcast_nowcast.sensorization.sensor.compute_regression_sensor")

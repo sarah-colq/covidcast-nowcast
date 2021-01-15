@@ -150,7 +150,9 @@ def get_regression_sensor_values(sensor: SignalConfig,
                                      time_values=Epidata.range(20200101, max(missing_dates)),
                                      geo_value=ground_truth.geo_value,
                                      geo_type=ground_truth.geo_type)
-        if response["result"] != 1:
+        if response["result"] == -2:
+            return output
+        elif response["result"] != 1:
             raise Exception(f"Bad result from Epidata: {response['message']}")
         indicator_values = LocationSeries(
             geo_value=ground_truth.geo_value,
