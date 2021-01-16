@@ -71,16 +71,20 @@ def get_ar_sensor_values(values: LocationSeries,
                          start_date: int,
                          end_date: int) -> LocationSeries:
     """
+    Compute sensorized values for the given date range with an AR model.
 
     Parameters
     ----------
     values
+        LocationSeries of values used to train and predict sensor value.
     start_date
+        first day to attempt to get sensor values for.
     end_date
+        last day to attempt to get sensor values for.
 
     Returns
     -------
-
+        LocationSeries of sensor data for the dates requested.
     """
     output = LocationSeries(values.geo_value, values.geo_type, [], [])
     for day in [int(i.strftime("%Y%m%d")) for i in date_range(str(start_date), str(end_date))]:
@@ -113,7 +117,7 @@ def get_regression_sensor_values(sensor: SignalConfig,
         last day to attempt to get sensor values for.
     ground_truth
         LocationSeries containing ground truth values to train against. Also used to transfer geo
-        information. Values are ignored if compute_missing=False
+        information. Values are ignored if compute_missing=False.
     compute_missing
         Flag for whether or not missing values should be recomputed.
     use_latest_issue
