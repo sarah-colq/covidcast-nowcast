@@ -54,11 +54,7 @@ def get_sensors(start_date: int,
         LocationSeries holding sensor data for a location.
     """
     output = defaultdict(list)
-    locations_to_get = [y for y in ground_truths if not np.any(np.isnan(y.values))]
-    unavail_loc = [y for y in ground_truths if np.any(np.isnan(y.values))]  # need to clean this up
-    if unavail_loc:
-        print(f"unavailable locations {unavail_loc}")
-    for location_truth in locations_to_get:
+    for location_truth in ground_truths:
         output["ground_truth_ar"].append(get_ar_sensor_values(location_truth, start_date, end_date))
         for sensor in sensors:
             output[sensor].append(get_regression_sensor_values(

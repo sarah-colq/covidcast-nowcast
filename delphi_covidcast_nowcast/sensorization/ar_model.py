@@ -16,7 +16,8 @@ def compute_ar_sensor(date: int,
     and then the predictor at the given date is fed into the model to get the returned sensor value
     for that day.
 
-    For now, this function assumes there are no gaps in the data.
+    Missing values are imputed with mean imputation, though currently this function is called
+    on data that has no nan values.
 
     It does not normalize the data yet.
 
