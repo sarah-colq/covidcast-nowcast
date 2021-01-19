@@ -16,11 +16,11 @@ class TestGetSensors:
     @patch("delphi_covidcast_nowcast.sensorization.sensor.get_regression_sensor_values")
     def test_get_sensors(self, get_regression_sensor_values, get_ar_sensor_values):
         """Test sensors are obtained correctly."""
-        get_regression_sensor_values.side_effect = [LocationSeries("w"),
-                                                    LocationSeries("x"),
+        get_regression_sensor_values.side_effect = [LocationSeries("w", values=[1], dates=[1]),
+                                                    LocationSeries("x", values=[1], dates=[1]),
                                                     LocationSeries("y"),
-                                                    LocationSeries("z")]
-        get_ar_sensor_values.side_effect = [LocationSeries("i"),
+                                                    LocationSeries("z", values=[1], dates=[1])]
+        get_ar_sensor_values.side_effect = [LocationSeries("i", values=[1], dates=[1]),
                                             LocationSeries("j")]
         test_sensors = [SignalConfig("src1", "sigA"),
                         SignalConfig("src2", "sigB")]
@@ -28,21 +28,24 @@ class TestGetSensors:
             LocationSeries(geo_value="pa", geo_type="state", values=[2, 3], dates=[0, 1]),
             LocationSeries(geo_value="ak", geo_type="state", values=[4, 5], dates=[0, 1])]
         assert get_sensors(None, None, test_sensors, test_ground_truths, True, True) == {
-            "ground_truth_ar": [LocationSeries("i"), LocationSeries("j")],
-            SignalConfig("src1", "sigA", ): [LocationSeries("w"), LocationSeries("y")],
-            SignalConfig("src2", "sigB", ): [LocationSeries("x"), LocationSeries("z")]
+            "ground_truth_ar": [LocationSeries("i", values=[1], dates=[1])],
+            SignalConfig("src1", "sigA", ): [LocationSeries("w", values=[1], dates=[1])],
+            SignalConfig("src2", "sigB", ): [LocationSeries("x", values=[1], dates=[1]),
+                                             LocationSeries("z", values=[1], dates=[1])]
         }
 
     @patch("delphi_covidcast_nowcast.sensorization.sensor.get_ar_sensor_values")
     def test_get_sensors_ar_only(self, get_ar_sensor_values):
-        """Test that not passing in sensors works"""
-        get_ar_sensor_values.side_effect = [LocationSeries("i"),
-                                            LocationSeries("j")]
+        """Test that not passing in regression sensors still works"""
+        get_ar_sensor_values.side_effect = [LocationSeries("i", values=[1], dates=[1]),
+                                            LocationSeries("j", values=[1], dates=[1]),
+                                            LocationSeries("k")]
         test_ground_truths = [
             LocationSeries(geo_value="pa", geo_type="state", values=[2, 3], dates=[0, 1]),
             LocationSeries(geo_value="ak", geo_type="state", values=[4, 5], dates=[0, 1])]
         assert get_sensors(None, None, [], test_ground_truths, True, True) == {
-            "ground_truth_ar": [LocationSeries("i"), LocationSeries("j")],
+            "ground_truth_ar": [LocationSeries("i", values=[1], dates=[1]),
+                                LocationSeries("j", values=[1], dates=[1])],
         }
 
 

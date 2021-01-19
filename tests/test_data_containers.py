@@ -17,6 +17,12 @@ class TestLocationSeries:
             LocationSeries(dates=[1, 1], values=[1, 2])
             assert str(exc.value) == "Duplicate dates not allowed."
 
+    def test_empty(self):
+        test_ls = LocationSeries(dates=[], values=[])
+        assert test_ls.empty
+        test_ls = LocationSeries(dates=[1], values=[2])
+        assert not test_ls.empty
+
     def test_add_data(self):
         test_ls = LocationSeries(dates=[1], values=[2])
         test_ls.add_data(3, 4)

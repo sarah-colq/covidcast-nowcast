@@ -55,11 +55,15 @@ def get_sensors(start_date: int,
     """
     output = defaultdict(list)
     for location_truth in ground_truths:
-        output["ground_truth_ar"].append(get_ar_sensor_values(location_truth, start_date, end_date))
+        ar_sensor = get_ar_sensor_values(location_truth, start_date, end_date)
+        if not ar_sensor.empty:
+            output["ground_truth_ar"].append(ar_sensor)
         for sensor in sensors:
-            output[sensor].append(get_regression_sensor_values(
+            reg_sensor = get_regression_sensor_values(
                 sensor, start_date, end_date, location_truth, compute_missing, use_latest_issue
-            ))
+            )
+            if not reg_sensor.empty:
+                output[sensor].append(reg_sensor)
     return output
 
 

@@ -39,6 +39,10 @@ class LocationSeries:
         object.__setattr__(self, 'dates', self.dates + [date])
         object.__setattr__(self, 'values', self.values + [value])
 
+    @property
+    def empty(self):
+        return True if (not self.dates and not self.values) else False
+
     def get_value(self, date: int) -> float:
         """Return value for a given date or nan if not available."""
         try:
