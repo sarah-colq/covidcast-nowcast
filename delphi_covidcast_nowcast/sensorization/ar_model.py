@@ -1,3 +1,4 @@
+from typing import Tuple
 from datetime import datetime, timedelta
 
 import numpy as np
@@ -9,7 +10,8 @@ def compute_ar_sensor(day: int,
                       values: LocationSeries,
                       ar_size: int = 2,
                       include_intercept: bool = False,
-                      lambda_: float = 0.1) -> float:
+                      lambda_: float = 0.1,
+                      standardize: bool = True) -> float:
     """
     Fit AR model through least squares and get sensorization value for a given date.
 
@@ -34,19 +36,27 @@ def compute_ar_sensor(day: int,
     include_intercept
         Boolean on whether or not to include intercept.
     lambda_
-        l2 regularization coefficient
+        l2 regularization coefficient.
+    standardize
+        Boolean for whether or not to standardize the data before fitting. If True,
+        include_intercept is is set to False.
 
     Returns
     -------
         Float value of sensor on `date`
     """
+    if standardize:
+        include_intercept = False
     previous_day = int((datetime.strptime(str(day), "%Y%m%d") - timedelta(1)).strftime("%Y%m%d"))
     window = values.get_data_range(min(values.dates), previous_day)
-    B = _ar_fit(np.array(window), ar_size, include_intercept, lambda_)
+    B, means, stddevs = _ar_fit(np.array(window), ar_size, include_intercept, lambda_, standardize)
     if B is None:
         return np.nan
-    date_X = np.hstack((window[-ar_size:], 1)) if include_intercept else np.array(window[-ar_size:])
+    date_X = np.hstack((1, window[-ar_size:])) if include_intercept else np.array(window[-ar_size:])
+    date_X = (date_X - means) / stddevs if standardize else date_X
     Yhat = (date_X @ B)[0]
+
+    # Taken from https://github.com/dfarrow0/covidcast-nowcast/blob/dfarrow/sf/src/sf/ar_sensor.py:
     # ground truth in some locations is a zero vector, which leads to perfect AR fit, zero
     # variance, and a singular covariance matrix so as a small hack, add some small noise.
     np.random.seed(day)
@@ -58,45 +68,64 @@ def compute_ar_sensor(day: int,
     return Yhat
 
 
-def _ar_fit(values, ar_size, include_intercept, lambda_):
+def _ar_fit(values: np.array,
+            ar_size: int,
+            include_intercept: bool,
+            lambda_: float,
+            standardize: bool) -> Tuple[np.array, np.array, np.array]:
     """
-    Fit AR coefficients.
+    Fit AR coefficients with OLS.
 
-    Taken from https://github.com/dfarrow0/covidcast-nowcast/tree/dfarrow/sf/src/sf
-
-    TODO: L2 is implemented incorrectly. ideally covariates would be
-    normalized before adding the penalty (so as not to unfairly penalize
-    covariates with high variance), but here they're not being normalized.
-    probably doesn't matter too much for now, but something to fix later.
+    Adapted from
+    https://github.com/dfarrow0/covidcast-nowcast/blob/dfarrow/sf/src/sf/ar_sensor.py
 
     Parameters
     ----------
-    idx
     values
+        Array of values to train on.
     ar_size
+        Order of autoregressive model.
     include_intercept
+        Boolean for whether to fit an intercept or not.
     lambda_
+        l2 regularization coefficient.
+    standardize
+        Boolean for whether or not to standardize the data before fitting. If True,
+        include_intercept is is set to False.
+    Returns
+    -------
+        Tuple of (fitted coefficients, mean vector, stddev vector). If standardize is False,
+        mean will be 0 stddev vector will be 1, which will be a no-op.
+    """
+    if standardize:
+        include_intercept = False
+    num_covariates = ar_size + include_intercept
+    num_observations = len(values) - ar_size
+    if num_observations < 2 * num_covariates:  # require some minimum number of samples
+        return None, None, None
+    X = np.hstack([values[j:-(ar_size - j), None] for j in range(ar_size)])
+    if include_intercept:
+        X = np.hstack((np.ones((num_observations, 1)), X))
+    X, means, stddevs = _standardize(X) if standardize else (X, 0, 1)
+    Y = values[ar_size:, None]
+    B = np.linalg.inv(X.T @ X + lambda_ * np.eye(num_covariates)) @ X.T @ Y
+    return B, means, stddevs
+
+
+def _standardize(data: np.ndarray) -> Tuple[np.ndarray, np.array, np.array]:
+    """
+    Standardize a matrix and return the mean and stddevs for each column
+
+    Parameters
+    ----------
+    data
+        Numpy matrix to standardize
 
     Returns
     -------
-
+        Standardize matrix, mean vector, stddev vector.
     """
-    num_covariates = ar_size
-    if include_intercept:
-        num_covariates += 1
-    num_observations = len(values) - ar_size
-    if num_observations < 2 * num_covariates:
-        # require some minimum number of samples
-        return None
-
-    # fairly standard OLS, maybe with intercept, and with L2 penalty
-    X = np.zeros((num_observations, num_covariates))
-    X[:, -1] = include_intercept
-    for j in range(ar_size):
-        X[:, j] = values[j:-(ar_size - j)]
-    Y = values[ar_size:, None]
-    X = np.vstack((X, lambda_ * np.eye(num_covariates)))
-    Y = np.vstack((Y, np.zeros((num_covariates, 1))))
-    B = np.linalg.inv(X.T @ X) @ X.T @ Y
-    return B
-
+    means = np.mean(data, axis=0)
+    stddevs = np.std(data, axis=0)
+    data = (data - means) / stddevs
+    return data, means, stddevs
