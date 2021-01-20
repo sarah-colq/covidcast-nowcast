@@ -38,7 +38,6 @@ def compute_regression_sensor(day: int,
     """
     previous_day = int((datetime.strptime(str(day), "%Y%m%d") - timedelta(1)).strftime("%Y%m%d"))
     first_day = max(min(covariate.dates), min(response.dates))
-    # dont want date itself so cut last one, need to clean this up
     train_Y = response.get_data_range(first_day, previous_day, None)
     if len(train_Y) < 5:  # some arbitrary min num observations:
         return np.nan
