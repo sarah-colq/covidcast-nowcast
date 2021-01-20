@@ -1,9 +1,11 @@
+from datetime import datetime, timedelta
+
 import numpy as np
 
 from ..data_containers import LocationSeries
 
 
-def compute_ar_sensor(date: int,
+def compute_ar_sensor(day: int,
                       values: LocationSeries,
                       ar_size: int = 2,
                       include_intercept: bool = False,
@@ -23,7 +25,7 @@ def compute_ar_sensor(date: int,
 
     Parameters
     ----------
-    date
+    day
         date to get sensor value for
     values
         LocationSeries containing covariate values.
@@ -38,30 +40,30 @@ def compute_ar_sensor(date: int,
     -------
         Float value of sensor on `date`
     """
-    window = values.get_data_range(min(values.dates), date)
-    Yhat = _ar_predict(len(window) - 1, np.array(values.values), ar_size, include_intercept, lambda_)
-
+    previous_day = int((datetime.strptime(str(day), "%Y%m%d") - timedelta(1)).strftime("%Y%m%d"))
+    window = values.get_data_range(min(values.dates), previous_day)
+    B = _ar_fit(np.array(window), ar_size, include_intercept, lambda_)
+    if B is None:
+        return np.nan
+    date_X = np.hstack((window[-ar_size:], 1)) if include_intercept else np.array(window[-ar_size:])
+    Yhat = (date_X @ B)[0]
     # ground truth in some locations is a zero vector, which leads to perfect AR fit, zero
     # variance, and a singular covariance matrix so as a small hack, add some small noise.
-    np.random.seed(date)
+    np.random.seed(day)
     Yhat += np.random.normal(0, 0.1)
     # as a huge hack, add more noise to prevent AR from unreasonably dominating
     # the nowcast since AR3 can nearly exactly predict some trendfiltered curves.
-    np.random.seed(date)
+    np.random.seed(day)
     Yhat += np.random.normal(0, 0.1 * np.maximum(0, np.mean(Yhat)))
     return Yhat
 
 
-def _ar_predict(idx, values, ar_size, include_intercept, lambda_):
+def _ar_fit(values, ar_size, include_intercept, lambda_):
     """
-    Predict value of a list at idx with an AR model trained on previous data.
+    Fit AR coefficients.
 
     Taken from https://github.com/dfarrow0/covidcast-nowcast/tree/dfarrow/sf/src/sf
 
-    Predict the value at values[idx] using values[idx - ar_size:idx]
-    to do that, train on all values[:idx]
-    note that an L2 penalty is applied since sometimes there is colinearity,
-    like when `values` is all zeros.
     TODO: L2 is implemented incorrectly. ideally covariates would be
     normalized before adding the penalty (so as not to unfairly penalize
     covariates with high variance), but here they're not being normalized.
@@ -82,24 +84,19 @@ def _ar_predict(idx, values, ar_size, include_intercept, lambda_):
     num_covariates = ar_size
     if include_intercept:
         num_covariates += 1
-    num_observations = idx - ar_size
+    num_observations = len(values) - ar_size
     if num_observations < 2 * num_covariates:
         # require some minimum number of samples
-        return np.nan
+        return None
 
     # fairly standard OLS, maybe with intercept, and with L2 penalty
     X = np.zeros((num_observations, num_covariates))
     X[:, -1] = include_intercept
     for j in range(ar_size):
-        X[:, j] = values[j:idx - ar_size + j]
-    Y = values[ar_size:idx, None]
+        X[:, j] = values[j:-(ar_size - j)]
+    Y = values[ar_size:, None]
     X = np.vstack((X, lambda_ * np.eye(num_covariates)))
     Y = np.vstack((Y, np.zeros((num_covariates, 1))))
     B = np.linalg.inv(X.T @ X) @ X.T @ Y
-    # given the model fit above, predict the value at `idx`
-    x = values[None, idx - ar_size:idx]
-    if include_intercept:
-        x = np.hstack((x, [[1]]))
-    # return model and estimate at `idx`
-    return (x @ B)[0, 0]
+    return B
 
