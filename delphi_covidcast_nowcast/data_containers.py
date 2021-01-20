@@ -77,7 +77,7 @@ class LocationSeries:
         out_values = []
         for day in all_dates:
             out_values.append(self.get_value(day))
-        if imputation_method is None:
+        if imputation_method is None or not out_values:
             return out_values
         elif imputation_method == "mean":
             mean = nanmean(out_values)

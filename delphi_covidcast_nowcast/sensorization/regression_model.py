@@ -40,12 +40,12 @@ def compute_regression_sensor(day: int,
     first_day = max(min(covariate.dates), min(response.dates))
     # dont want date itself so cut last one, need to clean this up
     train_Y = response.get_data_range(first_day, previous_day, None)
+    if len(train_Y) < 5:  # some arbitrary min num observations:
+        return np.nan
     train_covariates = covariate.get_data_range(first_day, previous_day, None)
     train_Y, train_covariates = zip(  # only get pairs where both are not nan
         *[(i, j) for i, j in zip(train_Y, train_covariates) if not (np.isnan(i) or np.isnan(j))]
     )
-    if len(train_Y) < 5:  # some arbitrary min num observations:
-        return np.nan
     train_Y = np.array(train_Y)
     train_covariates = np.array(train_covariates)
     X = np.ones((len(train_covariates), 1 + include_intercept))
