@@ -108,4 +108,4 @@ def nowcast(input_dates: List[int],
     stdev = np.sqrt(np.diag(S)).reshape(y.shape)
 
     # return output
-    pass
+    return y, stdev, output_locations
