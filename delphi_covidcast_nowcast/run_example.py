@@ -8,12 +8,13 @@ def main():
     input_dates = list(range(20200601, 20200610))
     input_locations = [('pa', 'state'),
                        ('42003', 'county')]
-    sensor_indicators = [SignalConfig('usa-facts', 'confirmed_incidence_num', 'ar3', 'ar'),
-                         SignalConfig('fb-survey', 'smoothed_hh_cmnty_cli', 'fb', 'regression')]
+    sensor_indicators = [SignalConfig('usa-facts', 'confirmed_incidence_num', 'ar3'),
+                         SignalConfig('fb-survey', 'smoothed_hh_cmnty_cli', 'fb')]
     convolved_truth_indicator = SignalConfig(source='usa-facts',
                                              signal='confirmed_incidence_num')
     kernel = delay.get_florida_delay_distribution()
     nowcast_dates = [20200610]
+    use_latest_issue = True
 
     infections = nowcast.nowcast(input_dates, input_locations,
                                  sensor_indicators, convolved_truth_indicator,
