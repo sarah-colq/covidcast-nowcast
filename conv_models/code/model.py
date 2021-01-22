@@ -12,7 +12,7 @@ class Model(tf.keras.Model):
         p_conv: Convolutional layer for p_d kernel
     """
 
-    def __init__(self, p=30, m=1, kernel_constraint=None):
+    def __init__(self, p=30, m=1, kernel_constraint=None, kernel_regularizer=None):
         super(Model, self).__init__()
         """
         Args:
@@ -25,10 +25,12 @@ class Model(tf.keras.Model):
 
         self.p = p
         self.m = m
+        self.kernel_constraint = kernel_constraint
+        self.kernel_regularizer = kernel_regularizer
         self.conv_layers = []
         for i in range(m):
             layer = Conv1D(filters=1, kernel_size=p,
-                           use_bias=False, name='conv{}'.format(i))
+                           use_bias=False, kernel_constraint = kernel_constraint, kernel_regularizer = kernel_regularizer, name='conv{}'.format(i))
             self.conv_layers.append(layer)
 
     def call(self, x):
