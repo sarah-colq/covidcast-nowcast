@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, Lambda, Concatenate
+from layers import CustomConv1D
 
 
 class Model(tf.keras.Model):
@@ -9,16 +10,17 @@ class Model(tf.keras.Model):
     Attributes:
         p: Size of the pd kernel
         m (int): Number of geo_values
-        p_conv: Convolutional layer for p_d kernel
     """
 
-    def __init__(self, p=30, m=1, kernel_constraint=None, kernel_regularizer=None):
+    def __init__(self, p=30, m=1, filter_bank=[], kernel_constraint=None, kernel_regularizer=None):
         super(Model, self).__init__()
         """
-        Args:
-            p (int): Size of the p_d kernel
+        Args: 
+            p (int): Size of the p_d kernel 
             m (int): Number of geo_values
-            p_conv: Convolutional layer for p_d kernel
+            filter_bank: A list of kernels. The kernels should be
+                1-dimensional arrays each with the correct orientation for
+                cross-correlation
         """
         assert p > 0 and isinstance(
             p, int), "p must be an integer greater than 0"
@@ -28,10 +30,17 @@ class Model(tf.keras.Model):
         self.kernel_constraint = kernel_constraint
         self.kernel_regularizer = kernel_regularizer
         self.conv_layers = []
-        for i in range(m):
-            layer = Conv1D(filters=1, kernel_size=p,
-                           use_bias=False, kernel_constraint = kernel_constraint, kernel_regularizer = kernel_regularizer, name='conv{}'.format(i))
-            self.conv_layers.append(layer)
+
+        if filter_bank:
+            for i in range(m):
+                layer = CustomConv1D(filters=1, kernel_size=p,
+                                     filter_bank=filter_bank, kernel_constraint=kernel_constraint, kernel_regularizer=kernel_regularizer, name='custom_conv{}'.format(i))
+                self.conv_layers.append(layer)
+        else:
+            for i in range(m):
+                layer = Conv1D(filters=1, kernel_size=p,
+                               use_bias=False, kernel_constraint=kernel_constraint, kernel_regularizer=kernel_regularizer, name='conv{}'.format(i))
+                self.conv_layers.append(layer)
 
     def call(self, x):
         if self.m == 1:
