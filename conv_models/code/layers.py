@@ -10,8 +10,8 @@ import functools
 
 class CustomConv1D(Conv1D):
 
-    def __init__(self, filters, kernel_size, filter_bank, activation=None, **kwargs):
-        super(CustomConv1D, self).__init__(filters, kernel_size,
+    def __init__(self, filters,  filter_bank, activation=None, **kwargs):
+        super(CustomConv1D, self).__init__(filters, kernel_size=1,
                                            activation=None, use_bias=False, **kwargs)
         self.stacked_filter_bank = tf.expand_dims(
             tf.expand_dims(tf.stack(filter_bank), axis=-1), axis=-1)

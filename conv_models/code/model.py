@@ -16,11 +16,11 @@ class Model(tf.keras.Model):
         super(Model, self).__init__()
         """
         Args: 
-            p (int): Size of the p_d kernel 
+            p (int): Size of the p_d kernel. Value ignored when filter_bank given. 
             m (int): Number of geo_values
             filter_bank: A list of kernels. The kernels should be
                 1-dimensional arrays each with the correct orientation for
-                cross-correlation
+                cross-correlation and length.
         """
         assert p > 0 and isinstance(
             p, int), "p must be an integer greater than 0"
@@ -33,13 +33,24 @@ class Model(tf.keras.Model):
 
         if filter_bank:
             for i in range(m):
-                layer = CustomConv1D(filters=1, kernel_size=p,
-                                     filter_bank=filter_bank, kernel_constraint=kernel_constraint, kernel_regularizer=kernel_regularizer, name='custom_conv{}'.format(i))
+                layer = CustomConv1D(
+                    filters=1,
+                    filter_bank=filter_bank,
+                    kernel_constraint=kernel_constraint,
+                    kernel_regularizer=kernel_regularizer,
+                    name='custom_conv{}'.format(i),
+                )
                 self.conv_layers.append(layer)
         else:
             for i in range(m):
-                layer = Conv1D(filters=1, kernel_size=p,
-                               use_bias=False, kernel_constraint=kernel_constraint, kernel_regularizer=kernel_regularizer, name='conv{}'.format(i))
+                layer = Conv1D(
+                    filters=1,
+                    kernel_size=p,
+                    use_bias=False,
+                    kernel_constraint=kernel_constraint,
+                    kernel_regularizer=kernel_regularizer,
+                    name='conv{}'.format(i),
+                )
                 self.conv_layers.append(layer)
 
     def call(self, x):
