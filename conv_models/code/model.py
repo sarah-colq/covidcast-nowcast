@@ -12,8 +12,7 @@ class Model(tf.keras.Model):
         m (int): Number of geo_values
     """
 
-    def __init__(self, p=30, m=1, filter_bank=[], kernel_constraint=None, kernel_regularizer=None):
-        super(Model, self).__init__()
+    def __init__(self, p=30, m=1, kernel_constraint=None, kernel_regularizer=None):
         """
         Args: 
             p (int): Size of the p_d kernel. Value ignored when filter_bank given. 
@@ -22,6 +21,7 @@ class Model(tf.keras.Model):
                 1-dimensional arrays each with the correct orientation for
                 cross-correlation and length.
         """
+        super(Model, self).__init__()
         assert p > 0 and isinstance(
             p, int), "p must be an integer greater than 0"
 
@@ -80,6 +80,9 @@ class Model(tf.keras.Model):
         gradients = tape.gradient(loss, self.trainable_variables)
         self.optimizer.apply_gradients(
             zip(gradients, self.trainable_variables))
+
+        for var in self.trainable_variables:
+            var.assign(tf.math.maximum(0., var))
 
         self.compiled_metrics.update_state(Y, Y_hat)
         return {m.name: m.result() for m in self.metrics}
