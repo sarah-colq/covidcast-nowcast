@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, Lambda, Concatenate
+from layers import CustomConv1D
 
 
 class Model(tf.keras.Model):
@@ -9,15 +10,16 @@ class Model(tf.keras.Model):
     Attributes:
         p: Size of the pd kernel
         m (int): Number of geo_values
-        p_conv: Convolutional layer for p_d kernel
     """
 
     def __init__(self, p=30, m=1, kernel_constraint=None, kernel_regularizer=None):
         """
-        Args:
-            p (int): Size of the p_d kernel
+        Args: 
+            p (int): Size of the p_d kernel. Value ignored when filter_bank given. 
             m (int): Number of geo_values
-            p_conv: Convolutional layer for p_d kernel
+            filter_bank: A list of kernels. The kernels should be
+                1-dimensional arrays each with the correct orientation for
+                cross-correlation and length.
         """
         super(Model, self).__init__()
         assert p > 0 and isinstance(
@@ -28,11 +30,28 @@ class Model(tf.keras.Model):
         self.kernel_constraint = kernel_constraint
         self.kernel_regularizer = kernel_regularizer
         self.conv_layers = []
-        for i in range(m):
-            layer = Conv1D(filters=1, kernel_size=p,
-                           use_bias=False, kernel_constraint = kernel_constraint,
-                           kernel_regularizer = kernel_regularizer, name='conv{}'.format(i))
-            self.conv_layers.append(layer)
+
+        if filter_bank:
+            for i in range(m):
+                layer = CustomConv1D(
+                    filters=1,
+                    filter_bank=filter_bank,
+                    kernel_constraint=kernel_constraint,
+                    kernel_regularizer=kernel_regularizer,
+                    name='custom_conv{}'.format(i),
+                )
+                self.conv_layers.append(layer)
+        else:
+            for i in range(m):
+                layer = Conv1D(
+                    filters=1,
+                    kernel_size=p,
+                    use_bias=False,
+                    kernel_constraint=kernel_constraint,
+                    kernel_regularizer=kernel_regularizer,
+                    name='conv{}'.format(i),
+                )
+                self.conv_layers.append(layer)
 
     def call(self, x):
         if self.m == 1:
@@ -64,11 +83,6 @@ class Model(tf.keras.Model):
 
         for var in self.trainable_variables:
             var.assign(tf.math.maximum(0., var))
-        
-        #with tf.control_dependencies([step]):
-        #    self.conv_layers = [
-        #        tf.math.maximum(0., layer) for layer in self.conv_layers
-        #    ]
 
         self.compiled_metrics.update_state(Y, Y_hat)
         return {m.name: m.result() for m in self.metrics}
