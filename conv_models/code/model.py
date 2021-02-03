@@ -13,13 +13,13 @@ class Model(tf.keras.Model):
     """
 
     def __init__(self, p=30, m=1, kernel_constraint=None, kernel_regularizer=None):
-        super(Model, self).__init__()
         """
         Args:
             p (int): Size of the p_d kernel
             m (int): Number of geo_values
             p_conv: Convolutional layer for p_d kernel
         """
+        super(Model, self).__init__()
         assert p > 0 and isinstance(
             p, int), "p must be an integer greater than 0"
 
@@ -30,7 +30,8 @@ class Model(tf.keras.Model):
         self.conv_layers = []
         for i in range(m):
             layer = Conv1D(filters=1, kernel_size=p,
-                           use_bias=False, kernel_constraint = kernel_constraint, kernel_regularizer = kernel_regularizer, name='conv{}'.format(i))
+                           use_bias=False, kernel_constraint = kernel_constraint,
+                           kernel_regularizer = kernel_regularizer, name='conv{}'.format(i))
             self.conv_layers.append(layer)
 
     def call(self, x):
@@ -60,6 +61,14 @@ class Model(tf.keras.Model):
         gradients = tape.gradient(loss, self.trainable_variables)
         self.optimizer.apply_gradients(
             zip(gradients, self.trainable_variables))
+
+        for var in self.trainable_variables:
+            var.assign(tf.math.maximum(0., var))
+        
+        #with tf.control_dependencies([step]):
+        #    self.conv_layers = [
+        #        tf.math.maximum(0., layer) for layer in self.conv_layers
+        #    ]
 
         self.compiled_metrics.update_state(Y, Y_hat)
         return {m.name: m.result() for m in self.metrics}
