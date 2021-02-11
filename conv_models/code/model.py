@@ -12,7 +12,7 @@ class Model(tf.keras.Model):
         m (int): Number of geo_values
     """
 
-    def __init__(self, p=30, m=1, kernel_constraint=None, kernel_regularizer=None):
+    def __init__(self, p=30, m=1, kernel_constraint=None, kernel_regularizer=None, filter_bank=None):
         """
         Args: 
             p (int): Size of the p_d kernel. Value ignored when filter_bank given. 
