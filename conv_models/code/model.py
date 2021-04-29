@@ -12,7 +12,7 @@ class Model(tf.keras.Model):
         m (int): Number of geo_values
     """
 
-    def __init__(self, p=30, m=1, kernel_constraint=None, kernel_regularizer=None, filter_bank=None):
+    def __init__(self, p=30, m=1, kernel_constraint=None, kernel_regularizer=None, filter_bank=None, lam=0):
         """
         Args: 
             p (int): Size of the p_d kernel. Value ignored when filter_bank given. 
@@ -29,9 +29,11 @@ class Model(tf.keras.Model):
         self.m = m
         self.kernel_constraint = kernel_constraint
         self.kernel_regularizer = kernel_regularizer
+        self.lam = lam
         self.conv_layers = []
 
         if filter_bank:
+            self.uses_filter_bank = True # (NEW) used for the regularization part
             for i in range(m):
                 layer = CustomConv1D(
                     filters=1,
@@ -43,6 +45,7 @@ class Model(tf.keras.Model):
                 self.conv_layers.append(layer)
         else:
             for i in range(m):
+                self.uses_filter_bank = False # (NEW) used for the regularization part
                 layer = Conv1D(
                     filters=1,
                     kernel_size=p,
@@ -76,6 +79,28 @@ class Model(tf.keras.Model):
         with tf.GradientTape() as tape:
             Y_hat = self(X_padded)
             loss = self.loss(Y, Y_hat)
+
+            #####################################
+            # (NEW) Code for regularization
+            #####################################
+            m = len(self.conv_layers)
+            n = self.conv_layers[0].trainable_variables[0].shape[0]
+
+            if self.uses_filter_bank:
+                loss_regularizer = 0
+
+                for i in range(m):
+                    # A_T is the set of filters stacked horizontally multiplied by their respective weights
+                    A_T = self.conv_layers[i].kernel * self.conv_layers[i].stacked_filter_bank # shape = (num_filters, length_of_each_filter)
+                    A_T = tf.squeeze(A_T)
+                    A = tf.transpose(A_T, perm=[1,0]) # shape = (length_of_each_filter, num_filters)
+                    K = tf.linalg.matmul(A_T,A) # shape = (num_filters, num_filters), this is effectively the Gram matrix of the set of filters [alpha_1*z_1, ..., alpha_i*z_i, ..., alpha_m*z_m]
+                    L2 = tf.reduce_sum(K ** 2)
+                    loss_regularizer += L2
+                
+                loss += self.lam*loss_regularizer
+            
+            #####################################
 
         gradients = tape.gradient(loss, self.trainable_variables)
         self.optimizer.apply_gradients(
