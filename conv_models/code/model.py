@@ -29,7 +29,7 @@ class Model(tf.keras.Model):
         self.m = m
         self.kernel_constraint = kernel_constraint
         self.kernel_regularizer = kernel_regularizer
-        self.lam = lam
+        self.lam = lam # (NEW) used for the regularization part
         self.conv_layers = []
 
         if filter_bank:
