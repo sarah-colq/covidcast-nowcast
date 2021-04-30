@@ -78,7 +78,7 @@ class CustomConv1D(Conv1D):
 
 class CustomConvGamma1D(Conv1D):
 
-    def __init__(self, p, filters=2, activation=None, **kwargs):
+    def __init__(self, p, filters=3, activation=None, **kwargs):
         super(CustomConvGamma1D, self).__init__(filters, kernel_size=1,
                                            activation=None, use_bias=False, **kwargs)
         self._kernel = tf.linspace(p,1,p)
@@ -139,10 +139,10 @@ class CustomConvGamma1D(Conv1D):
     def call(self, inputs):
         alpha = self.kernel[0,0,0,0]
         beta = self.kernel[0,0,0,1]
-
+        A = self.kernel[0,0,0,2]
         exp_beta = tf.math.exp(-beta*self._kernel)
         x_alpha = self._kernel ** (alpha-1)
-        self.kernel_ = x_alpha * exp_beta
+        self.kernel_ = A * x_alpha * exp_beta
         
         outputs = self._convolution_op(inputs, self.kernel_)
 
