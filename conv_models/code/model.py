@@ -121,7 +121,7 @@ class Model(tf.keras.Model):
 
 class ModelGamma(tf.keras.Model):
     """
-    Simple convolutional model for fitting leading indicators to case counts
+    Simple convolutional model for fitting leading indicators to case counts using a learned gamma distribution
     Attributes:
         p: Size of the pd kernel
         m (int): Number of geo_values
