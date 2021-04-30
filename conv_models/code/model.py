@@ -132,9 +132,7 @@ class ModelGamma(tf.keras.Model):
         Args: 
             p (int): Size of the p_d kernel. Value ignored when filter_bank given. 
             m (int): Number of geo_values
-            filter_bank: A list of kernels. The kernels should be
-                1-dimensional arrays each with the correct orientation for
-                cross-correlation and length.
+            lam (float): weight for log barrier penalty, helps to enforce the gamma parameters are positive
         """
         super(ModelGamma, self).__init__()
         assert p > 0 and isinstance(
