@@ -283,7 +283,7 @@ class ModelGamma(tf.keras.Model):
 
         with tf.GradientTape() as tape:
             Y_hat = self(X_padded)
-            loss = self.loss(Y[:,self.p:,:], Y_hat[:,self.p:,:])
+            loss = self.loss(Y, Y_hat)
             for i in range(self.m):
                 loss -= self.lam * tf.reduce_sum(tf.math.log(self.conv_layers[i].kernel))
 
